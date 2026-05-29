@@ -1,7 +1,7 @@
 <template>
   <div class="week-view">
     <div class="week-header">
-      <div class="time-column"></div>
+      <div class="time-column-header"></div>
       <div
         v-for="dateInfo in weekDaysInfo"
         :key="dateInfo.dateStr"
@@ -12,7 +12,7 @@
           'is-holiday': dateInfo.isHoliday,
           'weekend': dateInfo.isWeekend
         }"
-        @click="selectDate(dateInfo.date)"
+        @click="handleHeaderClick(dateInfo)"
       >
         <div class="weekday-name">{{ dateInfo.dayName }}</div>
         <div class="weekday-date">
@@ -36,7 +36,7 @@
           class="day-column"
           :class="{ 'today': dateInfo.isToday }"
         >
-          <div v-for="hour in 24" :key="hour" class="hour-slot">
+          <div v-for="hour in 24" :key="hour" class="hour-slot" :class="{ 'selected-slot': isTimeSlotSelected(dateInfo.dateStr, hour - 1) }" @click="handleTimeSlotClick(dateInfo.date, hour - 1)">
             <div
               v-for="event in getEventsForHour(dateInfo.date, hour - 1)"
               :key="event.id"
@@ -70,7 +70,7 @@ const emit = defineEmits<{
   (e: 'event-click', event: CalendarEvent): void;
 }>();
 
-const { weekDays, getDateInfo, selectDate } = useCalendar();
+const { weekDays, getDateInfo, selectDate, selectTimeSlot, selectedTimeSlot } = useCalendar();
 
 const weekDaysInfo = computed(() => {
   return weekDays.value.map(date => {
@@ -126,6 +126,31 @@ function getEventColor(category: EventCategory): string {
 function handleEventClick(event: CalendarEvent): void {
   emit('event-click', event);
 }
+
+function isTimeSlotSelected(dateStr: string, hour: number): boolean {
+  if (!selectedTimeSlot.value) return false;
+  if (selectedTimeSlot.value.date !== dateStr) return false;
+  if (!selectedTimeSlot.value.startTime) return true;
+  const slotHour = parseInt(selectedTimeSlot.value.startTime.split(':')[0], 10);
+  return slotHour === hour;
+}
+
+function handleHeaderClick(dateInfo: any): void {
+  selectDate(dateInfo.date);
+  selectTimeSlot({
+    date: dateInfo.dateStr
+  });
+}
+
+function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
+  const dateStr = date.format('YYYY-MM-DD');
+  selectDate(date);
+  selectTimeSlot({
+    date: dateStr,
+    startTime: `${hour.toString().padStart(2, '0')}:00`,
+    endTime: `${(hour + 1).toString().padStart(2, '0')}:00`
+  });
+}
 </script>
 
 <style scoped>
@@ -144,9 +169,10 @@ function handleEventClick(event: CalendarEvent): void {
   flex-shrink: 0;
 }
 
-.time-column {
-  width: 60px;
+.time-column-header {
+  width: 80px;
   flex-shrink: 0;
+  border-right: 1px solid var(--color-border-light);
 }
 
 .weekday-header {
@@ -155,7 +181,11 @@ function handleEventClick(event: CalendarEvent): void {
   padding: var(--spacing-2) var(--spacing-1);
   cursor: pointer;
   transition: background-color var(--transition-fast);
-  border-left: 1px solid var(--color-border-light);
+  border-right: 1px solid var(--color-border-light);
+}
+
+.weekday-header:last-child {
+  border-right: none;
 }
 
 .weekday-header:hover {
@@ -175,7 +205,7 @@ function handleEventClick(event: CalendarEvent): void {
 }
 
 .weekday-name {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: var(--font-medium);
   color: var(--color-text-secondary);
   margin-bottom: var(--spacing-0\.5);
@@ -210,7 +240,7 @@ function handleEventClick(event: CalendarEvent): void {
 }
 
 .lunar-date {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--color-lunar);
 }
 
@@ -220,15 +250,22 @@ function handleEventClick(event: CalendarEvent): void {
   overflow-y: auto;
 }
 
+.time-column {
+  width: 80px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-border-light);
+}
+
 .time-slot {
   height: 60px;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
-  padding: 0 var(--spacing-1);
+  padding: 0 var(--spacing-2);
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
   border-bottom: 1px solid var(--color-border-light);
+  font-weight: var(--font-medium);
 }
 
 .days-columns {
@@ -238,8 +275,12 @@ function handleEventClick(event: CalendarEvent): void {
 
 .day-column {
   flex: 1;
-  border-left: 1px solid var(--color-border-light);
+  border-right: 1px solid var(--color-border-light);
   position: relative;
+}
+
+.day-column:last-child {
+  border-right: none;
 }
 
 .day-column.today {
@@ -250,6 +291,16 @@ function handleEventClick(event: CalendarEvent): void {
   height: 60px;
   border-bottom: 1px solid var(--color-border-light);
   position: relative;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.hour-slot:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.hour-slot.selected-slot {
+  background-color: var(--color-primary-focus);
 }
 
 .event-block {
@@ -286,8 +337,9 @@ function handleEventClick(event: CalendarEvent): void {
 
 /* 响应式布局 */
 @media (max-width: 1024px) {
+  .time-column-header,
   .time-column {
-    width: 50px;
+    width: 60px;
   }
   
   .day-number {
@@ -297,7 +349,7 @@ function handleEventClick(event: CalendarEvent): void {
   }
   
   .weekday-name {
-    font-size: 10px;
+    font-size: 11px;
   }
   
   .lunar-date {
@@ -306,8 +358,9 @@ function handleEventClick(event: CalendarEvent): void {
 }
 
 @media (max-width: 768px) {
+  .time-column-header,
   .time-column {
-    width: 40px;
+    width: 50px;
   }
   
   .day-number {

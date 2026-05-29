@@ -92,6 +92,7 @@ export function useCalendar() {
     currentDate: computed(() => calendarStore.currentDate),
     selectedDate,
     viewMode: computed(() => calendarStore.viewMode),
+    selectedTimeSlot: computed(() => calendarStore.selectedTimeSlot),
     monthDays,
     weekDays,
     weekDayNames,
@@ -110,6 +111,7 @@ export function useCalendar() {
     goToToday: calendarStore.goToToday,
     goToDate: calendarStore.goToDate,
     selectDate: calendarStore.selectDate,
+    selectTimeSlot: calendarStore.selectTimeSlot,
     setViewMode: calendarStore.setViewMode,
     getMonthDays: calendarStore.getMonthDays,
     getWeekDays: calendarStore.getWeekDays

@@ -3,10 +3,17 @@ import { ref, computed } from 'vue';
 import dayjs from 'dayjs';
 import type { ViewMode } from '../types';
 
+export interface TimeSlotSelection {
+  date: string;
+  startTime?: string;
+  endTime?: string;
+}
+
 export const useCalendarStore = defineStore('calendar', () => {
   const currentDate = ref(dayjs());
   const selectedDate = ref(dayjs());
   const viewMode = ref<ViewMode>('month');
+  const selectedTimeSlot = ref<TimeSlotSelection | null>(null);
 
   const currentYear = computed(() => currentDate.value.year());
   const currentMonth = computed(() => currentDate.value.month());
@@ -55,6 +62,13 @@ export const useCalendarStore = defineStore('calendar', () => {
     selectedDate.value = dayjs(date);
   }
 
+  function selectTimeSlot(slot: TimeSlotSelection | null): void {
+    selectedTimeSlot.value = slot;
+    if (slot) {
+      selectedDate.value = dayjs(slot.date);
+    }
+  }
+
   function setViewMode(mode: ViewMode): void {
     viewMode.value = mode;
   }
@@ -98,6 +112,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     currentDate,
     selectedDate,
     viewMode,
+    selectedTimeSlot,
     currentYear,
     currentMonth,
     currentDay,
@@ -113,6 +128,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     goToToday,
     goToDate,
     selectDate,
+    selectTimeSlot,
     setViewMode,
     getMonthDays,
     getWeekDays

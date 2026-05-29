@@ -7,6 +7,7 @@ import { registerAlarmHandlers } from './ipc/alarm.ipc'
 import { registerSettingsHandlers } from './ipc/settings.ipc'
 import { registerDataHandlers } from './ipc/data.ipc'
 import { alarmService } from './services/alarm.service'
+import { storageService } from './services/storage.service'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -41,15 +42,14 @@ function createWindow(): void {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.electron')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  await storageService.init()
 
   registerEventHandlers()
   registerAlarmHandlers()

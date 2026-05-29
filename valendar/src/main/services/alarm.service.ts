@@ -13,12 +13,20 @@ class AlarmService {
 
   async startAllAlarms(): Promise<void> {
     const alarms = await storageService.getAlarms();
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
 
-    alarms.forEach(alarm => {
-      if (!alarm.isDismissed) {
-        this.scheduleAlarm(alarm);
+    for (const alarm of alarms) {
+      if (alarm.isDismissed) continue;
+
+      const triggerTime = new Date(alarm.triggerTime).getTime();
+      if (triggerTime < now - oneDay) {
+        await storageService.deleteAlarm(alarm.id);
+        continue;
       }
-    });
+
+      this.scheduleAlarm(alarm);
+    }
   }
 
   scheduleAlarm(alarm: Alarm): void {

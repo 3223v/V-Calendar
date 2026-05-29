@@ -7,6 +7,7 @@ export const useAlarmStore = defineStore('alarm', () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
   const activeAlarm = ref<Alarm | null>(null);
+  let listenerSetup = false;
 
   async function fetchAlarms(): Promise<void> {
     loading.value = true;
@@ -60,6 +61,8 @@ export const useAlarmStore = defineStore('alarm', () => {
   }
 
   function setupAlarmListener(): void {
+    if (listenerSetup) return;
+    listenerSetup = true;
     window.api.alarm.onTriggered((alarm: Alarm) => {
       activeAlarm.value = alarm;
     });

@@ -6,7 +6,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Settings>({
     language: 'zh-CN',
     theme: 'system',
-    weekStartDay: 1,
+    weekStartDay: 0,
     defaultView: 'month',
     showLunar: true,
     showHoliday: true,
