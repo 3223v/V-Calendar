@@ -31,21 +31,6 @@
         </div>
       </div>
       <div class="header-right">
-        <button class="btn btn-icon btn-ghost" @click="handleImport" title="导入数据">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        </button>
-        <button class="btn btn-icon btn-ghost" @click="handleExport" title="导出数据">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-        </button>
-        <div class="header-divider"></div>
         <button class="btn btn-icon btn-ghost" @click="handleSettings" title="设置">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
@@ -190,25 +175,6 @@ function handleEventClick(event: CalendarEvent): void {
   handleEdit(event);
 }
 
-async function handleImport(): Promise<void> {
-  const result = await window.api.data.import('json');
-  if (result.success) {
-    await eventStore.fetchEvents();
-    alert(`成功导入 ${result.imported} 个事件`);
-  } else {
-    alert('导入失败');
-  }
-}
-
-async function handleExport(): Promise<void> {
-  const result = await window.api.data.export('json');
-  if (result.success) {
-    alert(`成功导出 ${result.recordCount} 个事件`);
-  } else {
-    alert('导出失败');
-  }
-}
-
 function handleSettings(): void {
   console.log('Settings clicked');
 }
@@ -227,7 +193,7 @@ function handleSettings(): void {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-3) var(--spacing-5);
+  padding: var(--spacing-3) var(--spacing-6);
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border-light);
   min-height: 56px;
@@ -299,18 +265,13 @@ function handleSettings(): void {
   gap: var(--spacing-1);
 }
 
-.header-divider {
-  width: 1px;
-  height: 20px;
-  background-color: var(--color-border);
-  margin: 0 var(--spacing-2);
-}
-
 .app-main {
   display: flex;
   flex: 1;
   overflow: hidden;
   min-height: 0;
+  padding: var(--spacing-4) var(--spacing-6);
+  gap: var(--spacing-4);
 }
 
 .calendar-section {
@@ -319,15 +280,21 @@ function handleSettings(): void {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs);
 }
 
 .events-section {
   width: 360px;
   min-width: 300px;
   max-width: 420px;
-  border-left: 1px solid var(--color-border-light);
   overflow: hidden;
   background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs);
   flex-shrink: 0;
 }
 
@@ -358,7 +325,7 @@ function handleSettings(): void {
 
 @media (max-width: 768px) {
   .app-header {
-    padding: var(--spacing-2) var(--spacing-3);
+    padding: var(--spacing-2) var(--spacing-4);
   }
 
   .current-date {
@@ -368,14 +335,13 @@ function handleSettings(): void {
 
   .app-main {
     flex-direction: column;
+    padding: var(--spacing-3) var(--spacing-4);
   }
 
   .events-section {
     width: 100%;
     max-width: 100%;
     height: 40vh;
-    border-left: none;
-    border-top: 1px solid var(--color-border-light);
   }
 }
 
@@ -388,12 +354,9 @@ function handleSettings(): void {
     order: -1;
   }
 
-  .header-right {
-    gap: var(--spacing-0);
-  }
-
-  .header-divider {
-    display: none;
+  .app-main {
+    padding: var(--spacing-2) var(--spacing-3);
+    gap: var(--spacing-3);
   }
 }
 </style>

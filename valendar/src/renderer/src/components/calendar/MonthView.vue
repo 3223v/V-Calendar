@@ -14,7 +14,7 @@
           'other-month': !dateInfo.isCurrentMonth,
           'today': dateInfo.isToday,
           'selected': dateInfo.isSelected,
-          'holiday': dateInfo.isHoliday,
+          'is-holiday': dateInfo.isHoliday,
           'weekend': dateInfo.isWeekend
         }"
         @click="selectDate(dateInfo.date)"
@@ -23,12 +23,26 @@
           <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">
             {{ dateInfo.day }}
           </span>
-          <span v-if="dateInfo.lunarDateString && !dateInfo.isCurrentMonth" class="lunar-date">
+          <div class="day-tags">
+            <!-- 调休工作日标记 -->
+            <span v-if="isAdditionalWorkday(dateInfo)" class="tag tag-work">
+              班
+            </span>
+            <!-- 农历节日/节气（右上角） -->
+            <span v-if="dateInfo.lunarFestival || dateInfo.solarTerm" class="tag tag-lunar-festival">
+              {{ dateInfo.lunarFestival || dateInfo.solarTerm }}
+            </span>
+          </div>
+        </div>
+        <div class="day-content">
+          <!-- 农历信息 -->
+          <span class="lunar-date" :class="{ 'lunar-first': dateInfo.lunarInfo?.lunarDay === 1 }">
             {{ dateInfo.lunarDateString }}
           </span>
-        </div>
-        <div v-if="dateInfo.holidayName" class="holiday-name">
-          {{ dateInfo.holidayName }}
+          <!-- 阳历节假日（右下角） -->
+          <span v-if="dateInfo.solarHoliday" class="solar-holiday">
+            {{ dateInfo.solarHoliday }}
+          </span>
         </div>
         <div v-if="dateInfo.eventCount > 0" class="event-markers">
           <div
@@ -41,7 +55,7 @@
             <span class="event-title">{{ event.title }}</span>
           </div>
           <div v-if="dateInfo.eventCount > 2" class="more-events">
-            +{{ dateInfo.eventCount - 2 }} 更多
+            +{{ dateInfo.eventCount - 2 }}
           </div>
         </div>
       </div>
@@ -60,6 +74,11 @@ const monthDaysInfo = computed(() => {
   return monthDays.value.map(date => getDateInfo(date));
 });
 
+// 判断是否为调休工作日（周末但需要上班）
+function isAdditionalWorkday(dateInfo: any): boolean {
+  return dateInfo.isWeekend && dateInfo.isWorkday;
+}
+
 function getEventColor(category: EventCategory): string {
   const colors: Record<EventCategory, string> = {
     work: 'var(--color-event-work)',
@@ -77,14 +96,14 @@ function getEventColor(category: EventCategory): string {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--color-background);
+  background-color: var(--color-surface);
   overflow: hidden;
+  border-radius: var(--radius-lg);
 }
 
 .calendar-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border-light);
   padding: var(--spacing-2) 0;
   flex-shrink: 0;
@@ -111,7 +130,7 @@ function getEventColor(category: EventCategory): string {
 .calendar-day {
   border-right: 1px solid var(--color-border-light);
   border-bottom: 1px solid var(--color-border-light);
-  padding: var(--spacing-1\.5);
+  padding: var(--spacing-1);
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -137,7 +156,8 @@ function getEventColor(category: EventCategory): string {
   color: var(--color-text-light);
 }
 
-.calendar-day.other-month .event-markers {
+.calendar-day.other-month .lunar-date,
+.calendar-day.other-month .solar-holiday {
   opacity: 0.5;
 }
 
@@ -159,7 +179,7 @@ function getEventColor(category: EventCategory): string {
   background-color: var(--color-primary);
 }
 
-.calendar-day.holiday .day-number {
+.calendar-day.is-holiday .day-number {
   color: var(--color-holiday);
   font-weight: var(--font-semibold);
 }
@@ -170,23 +190,24 @@ function getEventColor(category: EventCategory): string {
 
 .day-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: var(--spacing-1);
+  margin-bottom: var(--spacing-0\.5);
   flex-shrink: 0;
 }
 
 .day-number {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: var(--font-medium);
   color: var(--color-text);
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
   transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .day-number.day-today {
@@ -195,18 +216,68 @@ function getEventColor(category: EventCategory): string {
   font-weight: var(--font-semibold);
 }
 
-.lunar-date {
-  font-size: var(--text-xs);
-  color: var(--color-lunar);
-  line-height: 1;
+.day-tags {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
-.holiday-name {
-  font-size: var(--text-xs);
+.tag {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.tag-work {
+  background-color: #e74c3c;
+  color: white;
+  font-size: 9px;
+  padding: 1px 3px;
+}
+
+.tag-lunar-festival {
+  background-color: var(--color-primary-focus);
+  color: var(--color-primary);
+  font-size: 9px;
+  padding: 1px 3px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex: 1;
+  min-height: 0;
+}
+
+.lunar-date {
+  font-size: 10px;
+  color: var(--color-lunar);
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lunar-date.lunar-first {
+  color: var(--color-primary);
+  font-weight: var(--font-medium);
+}
+
+.solar-holiday {
+  font-size: 9px;
   color: var(--color-holiday);
   font-weight: var(--font-medium);
-  margin-bottom: var(--spacing-0\.5);
-  line-height: 1.2;
+  line-height: 1;
+  text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -216,14 +287,15 @@ function getEventColor(category: EventCategory): string {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  flex-shrink: 0;
   overflow: hidden;
+  margin-top: auto;
 }
 
 .event-marker {
   padding: 1px 4px;
   border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
+  font-size: 10px;
   color: white;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -239,7 +311,7 @@ function getEventColor(category: EventCategory): string {
 }
 
 .more-events {
-  font-size: var(--text-xs);
+  font-size: 10px;
   color: var(--color-text-secondary);
   padding: 1px 4px;
   font-weight: var(--font-medium);
@@ -248,17 +320,30 @@ function getEventColor(category: EventCategory): string {
 /* 响应式布局 */
 @media (max-width: 1024px) {
   .calendar-day {
-    padding: var(--spacing-1);
+    padding: var(--spacing-0\.5);
   }
   
   .day-number {
     font-size: var(--text-xs);
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
+  }
+  
+  .tag {
+    font-size: 9px;
+    padding: 0 2px;
+  }
+  
+  .lunar-date {
+    font-size: 9px;
+  }
+  
+  .solar-holiday {
+    font-size: 8px;
   }
   
   .event-marker {
-    font-size: 10px;
+    font-size: 9px;
     padding: 0 3px;
   }
 }
@@ -272,7 +357,11 @@ function getEventColor(category: EventCategory): string {
     margin-bottom: 0;
   }
   
-  .lunar-date {
+  .day-tags {
+    display: none;
+  }
+  
+  .solar-holiday {
     display: none;
   }
 }

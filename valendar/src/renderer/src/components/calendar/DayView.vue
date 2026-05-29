@@ -122,36 +122,42 @@ function handleEventClick(event: CalendarEvent): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--color-background);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .day-header {
-  padding: var(--spacing-lg);
-  background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-6);
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
 }
 
 .date-info {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  align-items: center;
+  gap: var(--spacing-2);
 }
 
 .day-name {
-  font-size: 14px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--color-text-secondary);
   text-transform: capitalize;
+  letter-spacing: 0.05em;
 }
 
 .date-display {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-4);
 }
 
 .day-number {
-  font-size: 48px;
-  font-weight: 700;
+  font-size: var(--text-5xl);
+  font-weight: var(--font-bold);
   color: var(--color-primary);
   line-height: 1;
 }
@@ -159,24 +165,25 @@ function handleEventClick(event: CalendarEvent): void {
 .date-details {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: flex-start;
+  gap: var(--spacing-1);
 }
 
 .month-year {
-  font-size: 16px;
+  font-size: var(--text-lg);
   color: var(--color-text);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .lunar-date {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-lunar);
 }
 
 .holiday-name {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-holiday);
-  font-weight: 500;
+  font-weight: var(--font-medium);
 }
 
 .day-content {
@@ -188,15 +195,18 @@ function handleEventClick(event: CalendarEvent): void {
 .time-column {
   width: 80px;
   flex-shrink: 0;
-  border-right: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border-light);
 }
 
 .time-slot {
   height: 60px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  padding: 0 var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--spacing-2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .events-column {
@@ -206,7 +216,7 @@ function handleEventClick(event: CalendarEvent): void {
 
 .hour-slot {
   height: 60px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-light);
   position: relative;
 }
 
@@ -214,12 +224,12 @@ function handleEventClick(event: CalendarEvent): void {
   position: absolute;
   left: 4px;
   right: 4px;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-1) var(--spacing-2);
   color: white;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all var(--transition-fast);
   z-index: 1;
 }
 
@@ -237,16 +247,62 @@ function handleEventClick(event: CalendarEvent): void {
 }
 
 .event-title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .event-time {
-  font-size: 12px;
+  font-size: var(--text-sm);
   opacity: 0.9;
-  margin-top: 4px;
+  margin-top: var(--spacing-0\.5);
+}
+
+/* 响应式布局 */
+@media (max-width: 1024px) {
+  .day-header {
+    padding: var(--spacing-4);
+  }
+  
+  .day-number {
+    font-size: var(--text-4xl);
+  }
+  
+  .month-year {
+    font-size: var(--text-md);
+  }
+  
+  .time-column {
+    width: 60px;
+  }
+  
+  .time-slot {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .day-header {
+    padding: var(--spacing-3);
+  }
+  
+  .day-number {
+    font-size: var(--text-3xl);
+  }
+  
+  .date-display {
+    flex-direction: column;
+    gap: var(--spacing-1);
+  }
+  
+  .date-details {
+    align-items: center;
+  }
+  
+  .time-column {
+    width: 50px;
+  }
 }
 </style>

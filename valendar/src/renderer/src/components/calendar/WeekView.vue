@@ -9,14 +9,14 @@
         :class="{
           'today': dateInfo.isToday,
           'selected': dateInfo.isSelected,
-          'holiday': dateInfo.isHoliday,
+          'is-holiday': dateInfo.isHoliday,
           'weekend': dateInfo.isWeekend
         }"
         @click="selectDate(dateInfo.date)"
       >
         <div class="weekday-name">{{ dateInfo.dayName }}</div>
         <div class="weekday-date">
-          <span class="day-number">{{ dateInfo.day }}</span>
+          <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">{{ dateInfo.day }}</span>
           <span v-if="dateInfo.lunarDateString" class="lunar-date">
             {{ dateInfo.lunarDateString }}
           </span>
@@ -133,13 +133,15 @@ function handleEventClick(event: CalendarEvent): void {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: var(--color-background);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .week-header {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
-  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
 }
 
 .time-column {
@@ -150,10 +152,10 @@ function handleEventClick(event: CalendarEvent): void {
 .weekday-header {
   flex: 1;
   text-align: center;
-  padding: var(--spacing-sm);
+  padding: var(--spacing-2) var(--spacing-1);
   cursor: pointer;
-  transition: background-color 0.2s ease;
-  border-left: 1px solid var(--color-border);
+  transition: background-color var(--transition-fast);
+  border-left: 1px solid var(--color-border-light);
 }
 
 .weekday-header:hover {
@@ -161,37 +163,55 @@ function handleEventClick(event: CalendarEvent): void {
 }
 
 .weekday-header.today {
-  background-color: var(--color-surface);
+  background-color: rgba(44, 62, 80, 0.03);
 }
 
-.weekday-header.today .day-number {
-  background-color: var(--color-primary);
-  color: white;
-  border-radius: 50%;
+.weekday-header.is-holiday .day-number {
+  color: var(--color-holiday);
+}
+
+.weekday-header.weekend .weekday-name {
+  color: var(--color-weekend);
 }
 
 .weekday-name {
-  font-size: 12px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   color: var(--color-text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-0\.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .weekday-date {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
 }
 
 .day-number {
-  font-size: 20px;
-  font-weight: 500;
+  font-size: var(--text-xl);
+  font-weight: var(--font-medium);
   color: var(--color-text);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.day-number.day-today {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-weight: var(--font-semibold);
 }
 
 .lunar-date {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--color-lunar);
-  margin-top: 2px;
 }
 
 .week-content {
@@ -202,10 +222,13 @@ function handleEventClick(event: CalendarEvent): void {
 
 .time-slot {
   height: 60px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  padding: 0 var(--spacing-sm);
-  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--spacing-1);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .days-columns {
@@ -215,7 +238,7 @@ function handleEventClick(event: CalendarEvent): void {
 
 .day-column {
   flex: 1;
-  border-left: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border-light);
   position: relative;
 }
 
@@ -225,7 +248,7 @@ function handleEventClick(event: CalendarEvent): void {
 
 .hour-slot {
   height: 60px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-light);
   position: relative;
 }
 
@@ -233,13 +256,13 @@ function handleEventClick(event: CalendarEvent): void {
   position: absolute;
   left: 2px;
   right: 2px;
-  border-radius: 4px;
-  padding: 4px;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-0\.5) var(--spacing-1);
   color: white;
-  font-size: 12px;
+  font-size: var(--text-xs);
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all var(--transition-fast);
   z-index: 1;
 }
 
@@ -249,7 +272,7 @@ function handleEventClick(event: CalendarEvent): void {
 }
 
 .event-title {
-  font-weight: 500;
+  font-weight: var(--font-medium);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -259,5 +282,42 @@ function handleEventClick(event: CalendarEvent): void {
   font-size: 10px;
   opacity: 0.9;
   margin-top: 2px;
+}
+
+/* 响应式布局 */
+@media (max-width: 1024px) {
+  .time-column {
+    width: 50px;
+  }
+  
+  .day-number {
+    font-size: var(--text-lg);
+    width: 28px;
+    height: 28px;
+  }
+  
+  .weekday-name {
+    font-size: 10px;
+  }
+  
+  .lunar-date {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .time-column {
+    width: 40px;
+  }
+  
+  .day-number {
+    font-size: var(--text-md);
+    width: 24px;
+    height: 24px;
+  }
+  
+  .time-slot {
+    font-size: 10px;
+  }
 }
 </style>

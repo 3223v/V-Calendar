@@ -11,8 +11,8 @@ export function useCalendar() {
   const calendarStore = useCalendarStore();
   const eventStore = useEventStore();
   const settingsStore = useSettingsStore();
-  const { getLunarInfo, getLunarDateString } = useLunar();
-  const { isHoliday, isWeekend } = useHoliday();
+  const { getLunarInfo, getLunarDateString, getSolarTerm, getLunarFestival } = useLunar();
+  const { getHolidayInfo, isWorkday, isWeekend, getSolarHoliday } = useHoliday();
 
   const monthDays = computed(() => calendarStore.getMonthDays());
   const weekDays = computed(() => calendarStore.getWeekDays());
@@ -51,8 +51,12 @@ export function useCalendar() {
     const isToday = date.isSame(dayjs(), 'day');
     const isSelected = date.isSame(calendarStore.selectedDate, 'day');
     const lunarInfo = getLunarInfo(date);
-    const isHolidayDay = isHoliday(date);
+    const holidayInfo = getHolidayInfo(date);
+    const isWorkdayDay = isWorkday(date);
     const isWeekendDay = isWeekend(date);
+    const solarTerm = getSolarTerm(date);
+    const lunarFestival = getLunarFestival(date);
+    const solarHoliday = getSolarHoliday(date);
 
     return {
       date,
@@ -63,9 +67,14 @@ export function useCalendar() {
       isSelected,
       lunarInfo,
       lunarDateString: getLunarDateString(date),
-      holidayName: undefined,
-      isHoliday: isHolidayDay,
+      holidayInfo,
+      holidayName: holidayInfo?.name,
+      isHoliday: holidayInfo?.isHoliday || false,
+      isWorkday: isWorkdayDay,
       isWeekend: isWeekendDay,
+      solarTerm,
+      lunarFestival,
+      solarHoliday,
       events: getEventsForDate(date),
       eventCount: getEventCountForDate(date)
     };
