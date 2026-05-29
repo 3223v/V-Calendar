@@ -11,8 +11,8 @@ class AlarmService {
     this.mainWindow = window;
   }
 
-  startAllAlarms(): void {
-    const alarms = storageService.getAlarms();
+  async startAllAlarms(): Promise<void> {
+    const alarms = await storageService.getAlarms();
 
     alarms.forEach(alarm => {
       if (!alarm.isDismissed) {
@@ -50,26 +50,27 @@ class AlarmService {
     }
   }
 
-  snoozeAlarm(alarmId: string, minutes: number): void {
-    const alarms = storageService.getAlarms();
+  async snoozeAlarm(alarmId: string, minutes: number): Promise<void> {
+    const alarms = await storageService.getAlarms();
     const alarm = alarms.find(a => a.id === alarmId);
 
     if (!alarm) return;
 
     const snoozeTime = new Date(Date.now() + minutes * 60 * 1000).toISOString();
-    storageService.updateAlarm(alarmId, {
+    await storageService.updateAlarm(alarmId, {
       isSnoozed: true,
       triggerTime: snoozeTime
     });
 
-    const updatedAlarm = storageService.getAlarms().find(a => a.id === alarmId);
+    const updatedAlarms = await storageService.getAlarms();
+    const updatedAlarm = updatedAlarms.find(a => a.id === alarmId);
     if (updatedAlarm) {
       this.scheduleAlarm(updatedAlarm);
     }
   }
 
-  dismissAlarm(alarmId: string): void {
-    storageService.updateAlarm(alarmId, { isDismissed: true });
+  async dismissAlarm(alarmId: string): Promise<void> {
+    await storageService.updateAlarm(alarmId, { isDismissed: true });
     this.cancelAlarm(alarmId);
   }
 
@@ -81,8 +82,8 @@ class AlarmService {
     }
   }
 
-  createAlarmForEvent(eventId: string, triggerTime: string, message: string, sound?: string): Alarm {
-    const alarm = storageService.createAlarm({
+  async createAlarmForEvent(eventId: string, triggerTime: string, message: string, sound?: string): Promise<Alarm> {
+    const alarm = await storageService.createAlarm({
       eventId,
       triggerTime,
       message,
@@ -92,14 +93,14 @@ class AlarmService {
     return alarm;
   }
 
-  deleteAlarmForEvent(eventId: string): void {
-    const alarms = storageService.getAlarms();
-    alarms
-      .filter(a => a.eventId === eventId)
-      .forEach(alarm => {
-        this.cancelAlarm(alarm.id);
-        storageService.deleteAlarm(alarm.id);
-      });
+  async deleteAlarmForEvent(eventId: string): Promise<void> {
+    const alarms = await storageService.getAlarms();
+    const eventAlarms = alarms.filter(a => a.eventId === eventId);
+
+    for (const alarm of eventAlarms) {
+      this.cancelAlarm(alarm.id);
+      await storageService.deleteAlarm(alarm.id);
+    }
   }
 
   cleanup(): void {

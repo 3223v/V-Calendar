@@ -23,10 +23,10 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
+  mainWindow.on('ready-to-show', async () => {
     mainWindow.show()
     alarmService.setMainWindow(mainWindow)
-    alarmService.startAllAlarms()
+    await alarmService.startAllAlarms()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

@@ -1,4 +1,3 @@
-import Store from 'electron-store';
 import { v4 as uuidv4 } from 'uuid';
 import type { CalendarEvent, Settings, Alarm, EventInput, AlarmInput } from '../types';
 
@@ -23,9 +22,13 @@ const defaultSettings: Settings = {
 };
 
 class StorageService {
-  private store: Store<StoreSchema>;
+  private store: any;
+  private initialized = false;
 
-  constructor() {
+  async init(): Promise<void> {
+    if (this.initialized) return;
+
+    const Store = (await import('electron-store')).default;
     this.store = new Store<StoreSchema>({
       name: 'valendar-data',
       defaults: {
@@ -34,19 +37,29 @@ class StorageService {
         alarms: []
       }
     });
+    this.initialized = true;
   }
 
-  getEvents(): CalendarEvent[] {
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      await this.init();
+    }
+  }
+
+  async getEvents(): Promise<CalendarEvent[]> {
+    await this.ensureInitialized();
     return this.store.get('events', []);
   }
 
-  getEvent(id: string): CalendarEvent | undefined {
-    const events = this.getEvents();
+  async getEvent(id: string): Promise<CalendarEvent | undefined> {
+    await this.ensureInitialized();
+    const events = await this.getEvents();
     return events.find(e => e.id === id);
   }
 
-  createEvent(input: EventInput): CalendarEvent {
-    const events = this.getEvents();
+  async createEvent(input: EventInput): Promise<CalendarEvent> {
+    await this.ensureInitialized();
+    const events = await this.getEvents();
     const now = new Date().toISOString();
     const event: CalendarEvent = {
       id: uuidv4(),
@@ -60,8 +73,9 @@ class StorageService {
     return event;
   }
 
-  updateEvent(id: string, input: EventInput): CalendarEvent | null {
-    const events = this.getEvents();
+  async updateEvent(id: string, input: EventInput): Promise<CalendarEvent | null> {
+    await this.ensureInitialized();
+    const events = await this.getEvents();
     const index = events.findIndex(e => e.id === id);
     if (index === -1) return null;
 
@@ -76,8 +90,9 @@ class StorageService {
     return event;
   }
 
-  deleteEvent(id: string): boolean {
-    const events = this.getEvents();
+  async deleteEvent(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const events = await this.getEvents();
     const index = events.findIndex(e => e.id === id);
     if (index === -1) return false;
 
@@ -86,8 +101,9 @@ class StorageService {
     return true;
   }
 
-  deleteEvents(ids: string[]): number {
-    const events = this.getEvents();
+  async deleteEvents(ids: string[]): Promise<number> {
+    await this.ensureInitialized();
+    const events = await this.getEvents();
     const initialLength = events.length;
     const idsSet = new Set(ids);
     const filtered = events.filter(e => !idsSet.has(e.id));
@@ -95,23 +111,27 @@ class StorageService {
     return initialLength - filtered.length;
   }
 
-  getSettings(): Settings {
+  async getSettings(): Promise<Settings> {
+    await this.ensureInitialized();
     return this.store.get('settings', defaultSettings);
   }
 
-  updateSettings(updates: Partial<Settings>): Settings {
-    const settings = this.getSettings();
+  async updateSettings(updates: Partial<Settings>): Promise<Settings> {
+    await this.ensureInitialized();
+    const settings = await this.getSettings();
     const newSettings = { ...settings, ...updates };
     this.store.set('settings', newSettings);
     return newSettings;
   }
 
-  getAlarms(): Alarm[] {
+  async getAlarms(): Promise<Alarm[]> {
+    await this.ensureInitialized();
     return this.store.get('alarms', []);
   }
 
-  createAlarm(input: AlarmInput): Alarm {
-    const alarms = this.getAlarms();
+  async createAlarm(input: AlarmInput): Promise<Alarm> {
+    await this.ensureInitialized();
+    const alarms = await this.getAlarms();
     const alarm: Alarm = {
       id: uuidv4(),
       ...input,
@@ -123,8 +143,9 @@ class StorageService {
     return alarm;
   }
 
-  updateAlarm(id: string, updates: Partial<Alarm>): Alarm | null {
-    const alarms = this.getAlarms();
+  async updateAlarm(id: string, updates: Partial<Alarm>): Promise<Alarm | null> {
+    await this.ensureInitialized();
+    const alarms = await this.getAlarms();
     const index = alarms.findIndex(a => a.id === id);
     if (index === -1) return null;
 
@@ -133,8 +154,9 @@ class StorageService {
     return alarms[index];
   }
 
-  deleteAlarm(id: string): boolean {
-    const alarms = this.getAlarms();
+  async deleteAlarm(id: string): Promise<boolean> {
+    await this.ensureInitialized();
+    const alarms = await this.getAlarms();
     const index = alarms.findIndex(a => a.id === id);
     if (index === -1) return false;
 
@@ -143,16 +165,18 @@ class StorageService {
     return true;
   }
 
-  clearDismissedAlarms(): void {
-    const alarms = this.getAlarms().filter(a => !a.isDismissed);
+  async clearDismissedAlarms(): Promise<void> {
+    await this.ensureInitialized();
+    const alarms = (await this.getAlarms()).filter(a => !a.isDismissed);
     this.store.set('alarms', alarms);
   }
 
-  exportData(): string {
+  async exportData(): Promise<string> {
+    await this.ensureInitialized();
     return JSON.stringify({
-      events: this.getEvents(),
-      settings: this.getSettings(),
-      alarms: this.getAlarms(),
+      events: await this.getEvents(),
+      settings: await this.getSettings(),
+      alarms: await this.getAlarms(),
       metadata: {
         version: '1.0.0',
         lastModified: new Date().toISOString()
@@ -160,14 +184,15 @@ class StorageService {
     }, null, 2);
   }
 
-  importData(jsonString: string): { imported: number; errors: Array<{ index: number; error: string }> } {
+  async importData(jsonString: string): Promise<{ imported: number; errors: Array<{ index: number; error: string }> }> {
+    await this.ensureInitialized();
     try {
       const data = JSON.parse(jsonString);
       let imported = 0;
       const errors: Array<{ index: number; error: string }> = [];
 
       if (data.events && Array.isArray(data.events)) {
-        const existingEvents = this.getEvents();
+        const existingEvents = await this.getEvents();
         data.events.forEach((event: CalendarEvent, index: number) => {
           try {
             const newEvent: CalendarEvent = {
@@ -198,7 +223,7 @@ class StorageService {
       }
 
       if (data.settings) {
-        this.updateSettings(data.settings);
+        await this.updateSettings(data.settings);
       }
 
       return { imported, errors };

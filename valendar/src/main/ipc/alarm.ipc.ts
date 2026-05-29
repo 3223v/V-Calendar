@@ -6,7 +6,7 @@ import type { AlarmInput } from '../types';
 export function registerAlarmHandlers(): void {
   ipcMain.handle('alarm:getAll', async () => {
     try {
-      return storageService.getAlarms();
+      return await storageService.getAlarms();
     } catch (error) {
       console.error('Error getting alarms:', error);
       throw error;
@@ -29,7 +29,7 @@ export function registerAlarmHandlers(): void {
 
   ipcMain.handle('alarm:snooze', async (_, id: string, minutes?: number) => {
     try {
-      const settings = storageService.getSettings();
+      const settings = await storageService.getSettings();
       const snoozeMinutes = minutes ?? settings.snoozeMinutes;
       alarmService.snoozeAlarm(id, snoozeMinutes);
       return true;
@@ -52,7 +52,7 @@ export function registerAlarmHandlers(): void {
   ipcMain.handle('alarm:delete', async (_, id: string) => {
     try {
       alarmService.cancelAlarm(id);
-      return storageService.deleteAlarm(id);
+      return await storageService.deleteAlarm(id);
     } catch (error) {
       console.error('Error deleting alarm:', error);
       throw error;

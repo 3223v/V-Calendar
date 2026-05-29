@@ -6,7 +6,7 @@ import type { EventInput, EventQueryParams } from '../types';
 export function registerEventHandlers(): void {
   ipcMain.handle('event:getAll', async (_, params?: EventQueryParams) => {
     try {
-      let events = storageService.getEvents();
+      let events = await storageService.getEvents();
 
       if (params) {
         if (params.startDate) {
@@ -36,7 +36,7 @@ export function registerEventHandlers(): void {
 
   ipcMain.handle('event:get', async (_, id: string) => {
     try {
-      return storageService.getEvent(id) || null;
+      return await storageService.getEvent(id) || null;
     } catch (error) {
       console.error('Error getting event:', error);
       throw error;
@@ -45,7 +45,7 @@ export function registerEventHandlers(): void {
 
   ipcMain.handle('event:create', async (_, input: EventInput) => {
     try {
-      const event = storageService.createEvent(input);
+      const event = await storageService.createEvent(input);
 
       if (event.alarm?.isEnabled && event.alarm.before > 0) {
         const eventDate = event.startTime
@@ -72,7 +72,7 @@ export function registerEventHandlers(): void {
 
   ipcMain.handle('event:update', async (_, id: string, input: EventInput) => {
     try {
-      const event = storageService.updateEvent(id, input);
+      const event = await storageService.updateEvent(id, input);
 
       if (event) {
         alarmService.deleteAlarmForEvent(id);
@@ -104,7 +104,7 @@ export function registerEventHandlers(): void {
   ipcMain.handle('event:delete', async (_, id: string) => {
     try {
       alarmService.deleteAlarmForEvent(id);
-      return storageService.deleteEvent(id);
+      return await storageService.deleteEvent(id);
     } catch (error) {
       console.error('Error deleting event:', error);
       throw error;
@@ -114,7 +114,7 @@ export function registerEventHandlers(): void {
   ipcMain.handle('event:deleteMany', async (_, ids: string[]) => {
     try {
       ids.forEach(id => alarmService.deleteAlarmForEvent(id));
-      return storageService.deleteEvents(ids);
+      return await storageService.deleteEvents(ids);
     } catch (error) {
       console.error('Error deleting events:', error);
       throw error;

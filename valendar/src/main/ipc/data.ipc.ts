@@ -17,19 +17,20 @@ export function registerDataHandlers(): void {
         return { success: false, error: 'Export cancelled' };
       }
 
-      const data = storageService.exportData();
+      const data = await storageService.exportData();
 
       if (format === 'json') {
         writeFileSync(result.filePath, data, 'utf-8');
       } else {
-        const events = storageService.getEvents();
+        const events = await storageService.getEvents();
         const csv = convertToCSV(events);
         writeFileSync(result.filePath, csv, 'utf-8');
       }
 
+      const allEvents = await storageService.getEvents();
       return {
         success: true,
-        recordCount: storageService.getEvents().length
+        recordCount: allEvents.length
       };
     } catch (error) {
       console.error('Error exporting data:', error);
@@ -59,7 +60,7 @@ export function registerDataHandlers(): void {
       const content = readFileSync(filePath, 'utf-8');
 
       if (format === 'json') {
-        const importResult = storageService.importData(content);
+        const importResult = await storageService.importData(content);
         return {
           success: true,
           ...importResult
@@ -69,14 +70,14 @@ export function registerDataHandlers(): void {
         let imported = 0;
         const errors: Array<{ index: number; error: string }> = [];
 
-        events.forEach((event, index) => {
+        for (let i = 0; i < events.length; i++) {
           try {
-            storageService.createEvent(event);
+            await storageService.createEvent(events[i]);
             imported++;
           } catch (err) {
-            errors.push({ index, error: String(err) });
+            errors.push({ index: i, error: String(err) });
           }
-        });
+        }
 
         return {
           success: true,

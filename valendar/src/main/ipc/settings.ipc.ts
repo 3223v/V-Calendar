@@ -5,7 +5,7 @@ import type { Settings } from '../types';
 export function registerSettingsHandlers(): void {
   ipcMain.handle('settings:get', async () => {
     try {
-      return storageService.getSettings();
+      return await storageService.getSettings();
     } catch (error) {
       console.error('Error getting settings:', error);
       throw error;
@@ -14,7 +14,7 @@ export function registerSettingsHandlers(): void {
 
   ipcMain.handle('settings:update', async (_, updates: Partial<Settings>) => {
     try {
-      return storageService.updateSettings(updates);
+      return await storageService.updateSettings(updates);
     } catch (error) {
       console.error('Error updating settings:', error);
       throw error;
