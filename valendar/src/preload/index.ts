@@ -1,12 +1,17 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { eventAPI } from './api/event.api'
+import { alarmAPI } from './api/alarm.api'
+import { settingsAPI } from './api/settings.api'
+import { dataAPI } from './api/data.api'
 
-// Custom APIs for renderer
-const api = {}
+const api = {
+  event: eventAPI,
+  alarm: alarmAPI,
+  settings: settingsAPI,
+  data: dataAPI
+}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
