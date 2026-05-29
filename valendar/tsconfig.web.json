@@ -4,11 +4,14 @@
     "src/renderer/src/env.d.ts",
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.vue",
-    "src/preload/*.d.ts"
+    "src/preload/*.d.ts",
+    "src/preload/types/**/*",
+    "src/main/types/**/*"
   ],
   "compilerOptions": {
     "composite": true,
     "baseUrl": ".",
+    "skipLibCheck": true,
     "paths": {
       "@renderer/*": [
         "src/renderer/src/*"

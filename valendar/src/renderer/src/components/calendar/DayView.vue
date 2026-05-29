@@ -2,18 +2,12 @@
   <div class="day-view">
     <div class="day-header">
       <div class="date-info">
-        <div class="day-name">{{ selectedDateInfo.dayName }}</div>
-        <div class="date-display">
-          <span class="day-number">{{ selectedDateInfo.day }}</span>
-          <div class="date-details">
-            <span class="month-year">{{ selectedDateInfo.monthYear }}</span>
-            <span v-if="selectedDateInfo.lunarDateString" class="lunar-date">
-              {{ selectedDateInfo.lunarDateString }}
-            </span>
-            <span v-if="selectedDateInfo.holidayName" class="holiday-name">
-              {{ selectedDateInfo.holidayName }}
-            </span>
-          </div>
+        <div class="date-row">
+          <span class="day-name">{{ selectedDateInfo.dayNameCN }} {{ selectedDateInfo.dayNameEN }}</span>
+          <span class="date-divider">·</span>
+          <span class="solar-date">{{ selectedDateInfo.solarDate }}</span>
+          <span class="date-divider">·</span>
+          <span class="lunar-date">{{ selectedDateInfo.lunarDateStr }}</span>
         </div>
       </div>
     </div>
@@ -24,7 +18,7 @@
         </div>
       </div>
       <div class="events-column">
-        <div v-for="hour in 24" :key="hour" class="hour-slot">
+        <div v-for="hour in 24" :key="hour" class="hour-slot" :class="{ 'selected-slot': isTimeSlotSelected(hour - 1) }" @click="handleTimeSlotClick(hour - 1)">
           <div
             v-for="event in getEventsForHour(hour - 1)"
             :key="event.id"
@@ -61,15 +55,23 @@ const emit = defineEmits<{
   (e: 'event-click', event: CalendarEvent): void;
 }>();
 
-const { selectedDate, getDateInfo } = useCalendar();
+const { selectedDate, getDateInfo, selectTimeSlot, selectedTimeSlot } = useCalendar();
 
 const selectedDateInfo = computed(() => {
   const info = getDateInfo(selectedDate.value);
+  const dayOfWeek = selectedDate.value.day();
+  
+  // 中文星期
+  const dayNamesCN = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  // 英文星期
+  const dayNamesEN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
   return {
     ...info,
-    dayName: selectedDate.value.format('dddd'),
-    day: selectedDate.value.date(),
-    monthYear: selectedDate.value.format('YYYY年M月')
+    dayNameCN: dayNamesCN[dayOfWeek],
+    dayNameEN: dayNamesEN[dayOfWeek],
+    solarDate: selectedDate.value.format('YYYY年M月D日'),
+    lunarDateStr: info.lunarDateString || ''
   };
 });
 
@@ -115,6 +117,24 @@ function getEventColor(category: EventCategory): string {
 function handleEventClick(event: CalendarEvent): void {
   emit('event-click', event);
 }
+
+function isTimeSlotSelected(hour: number): boolean {
+  if (!selectedTimeSlot.value) return false;
+  const dateStr = selectedDate.value.format('YYYY-MM-DD');
+  if (selectedTimeSlot.value.date !== dateStr) return false;
+  if (!selectedTimeSlot.value.startTime) return true;
+  const slotHour = parseInt(selectedTimeSlot.value.startTime.split(':')[0], 10);
+  return slotHour === hour;
+}
+
+function handleTimeSlotClick(hour: number): void {
+  const dateStr = selectedDate.value.format('YYYY-MM-DD');
+  selectTimeSlot({
+    date: dateStr,
+    startTime: `${hour.toString().padStart(2, '0')}:00`,
+    endTime: `${(hour + 1).toString().padStart(2, '0')}:00`
+  });
+}
 </script>
 
 <style scoped>
@@ -128,7 +148,7 @@ function handleEventClick(event: CalendarEvent): void {
 }
 
 .day-header {
-  padding: var(--spacing-6);
+  padding: var(--spacing-5) var(--spacing-6);
   text-align: center;
   border-bottom: 1px solid var(--color-border-light);
   flex-shrink: 0;
@@ -136,54 +156,35 @@ function handleEventClick(event: CalendarEvent): void {
 
 .date-info {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: var(--spacing-2);
+}
+
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  font-size: var(--text-xl);
 }
 
 .day-name {
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-text-secondary);
-  text-transform: capitalize;
-  letter-spacing: 0.05em;
-}
-
-.date-display {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-}
-
-.day-number {
-  font-size: var(--text-5xl);
-  font-weight: var(--font-bold);
-  color: var(--color-primary);
-  line-height: 1;
-}
-
-.date-details {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-1);
-}
-
-.month-year {
-  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
   color: var(--color-text);
+}
+
+.date-divider {
+  color: var(--color-text-light);
+  font-weight: var(--font-light);
+}
+
+.solar-date {
   font-weight: var(--font-medium);
+  color: var(--color-text);
 }
 
 .lunar-date {
-  font-size: var(--text-md);
-  color: var(--color-lunar);
-}
-
-.holiday-name {
-  font-size: var(--text-md);
-  color: var(--color-holiday);
   font-weight: var(--font-medium);
+  color: var(--color-lunar);
 }
 
 .day-content {
@@ -200,13 +201,14 @@ function handleEventClick(event: CalendarEvent): void {
 
 .time-slot {
   height: 60px;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
   padding: 0 var(--spacing-2);
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
   border-bottom: 1px solid var(--color-border-light);
+  font-weight: var(--font-medium);
 }
 
 .events-column {
@@ -218,6 +220,16 @@ function handleEventClick(event: CalendarEvent): void {
   height: 60px;
   border-bottom: 1px solid var(--color-border-light);
   position: relative;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.hour-slot:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.hour-slot.selected-slot {
+  background-color: var(--color-primary-focus);
 }
 
 .event-block {
@@ -266,12 +278,9 @@ function handleEventClick(event: CalendarEvent): void {
     padding: var(--spacing-4);
   }
   
-  .day-number {
-    font-size: var(--text-4xl);
-  }
-  
-  .month-year {
-    font-size: var(--text-md);
+  .date-row {
+    font-size: var(--text-lg);
+    gap: var(--spacing-2);
   }
   
   .time-column {
@@ -288,17 +297,11 @@ function handleEventClick(event: CalendarEvent): void {
     padding: var(--spacing-3);
   }
   
-  .day-number {
-    font-size: var(--text-3xl);
-  }
-  
-  .date-display {
-    flex-direction: column;
-    gap: var(--spacing-1);
-  }
-  
-  .date-details {
-    align-items: center;
+  .date-row {
+    font-size: var(--text-md);
+    gap: var(--spacing-1\.5);
+    flex-wrap: wrap;
+    justify-content: center;
   }
   
   .time-column {

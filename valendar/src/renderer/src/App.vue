@@ -61,6 +61,9 @@
       <EventForm
         v-if="showEventForm"
         :event="editingEvent"
+        :default-date="defaultEventDate"
+        :default-start-time="defaultEventStartTime"
+        :default-end-time="defaultEventEndTime"
         @submit="handleFormSubmit"
         @close="closeEventForm"
       />
@@ -89,7 +92,7 @@ const calendarStore = useCalendarStore();
 const eventStore = useEventStore();
 const settingsStore = useSettingsStore();
 const alarmStore = useAlarmStore();
-const { formattedCurrentDate, selectedDate } = useCalendar();
+const { formattedCurrentDate, selectedDate, selectedTimeSlot } = useCalendar();
 
 const viewMode = ref<'month' | 'week' | 'day'>('month');
 const showEventForm = ref(false);
@@ -104,6 +107,18 @@ const viewModes = [
 const selectedDateEvents = computed(() => {
   const dateStr = selectedDate.value.format('YYYY-MM-DD');
   return eventStore.getEventsByDate(dateStr);
+});
+
+const defaultEventDate = computed(() => {
+  return selectedTimeSlot.value?.date || selectedDate.value.format('YYYY-MM-DD');
+});
+
+const defaultEventStartTime = computed(() => {
+  return selectedTimeSlot.value?.startTime || '';
+});
+
+const defaultEventEndTime = computed(() => {
+  return selectedTimeSlot.value?.endTime || '';
 });
 
 onMounted(async () => {
@@ -158,12 +173,29 @@ async function handleDelete(event: CalendarEvent): Promise<void> {
 }
 
 async function handleFormSubmit(input: EventInput): Promise<void> {
-  if (editingEvent.value) {
-    await eventStore.updateEvent(editingEvent.value.id, input);
-  } else {
-    await eventStore.createEvent(input);
+  console.log('[App] handleFormSubmit called:', input.title);
+  try {
+    let success = false;
+    if (editingEvent.value) {
+      console.log('[App] Updating event:', editingEvent.value.id);
+      const result = await eventStore.updateEvent(editingEvent.value.id, input);
+      success = !!result;
+    } else {
+      console.log('[App] Creating new event...');
+      const result = await eventStore.createEvent(input);
+      success = !!result;
+      console.log('[App] Create result:', success, result?.id);
+    }
+    if (success) {
+      console.log('[App] Success, fetching events and closing form');
+      await eventStore.fetchEvents();
+      closeEventForm();
+    } else {
+      console.warn('[App] Operation failed, form stays open');
+    }
+  } catch (err) {
+    console.error('[App] handleFormSubmit error:', err);
   }
-  closeEventForm();
 }
 
 function closeEventForm(): void {

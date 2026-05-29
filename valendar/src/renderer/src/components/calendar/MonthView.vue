@@ -17,16 +17,20 @@
           'is-holiday': dateInfo.isHoliday,
           'weekend': dateInfo.isWeekend
         }"
-        @click="selectDate(dateInfo.date)"
+        @click="handleDayClick(dateInfo)"
       >
         <div class="day-header">
           <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">
             {{ dateInfo.day }}
           </span>
           <div class="day-tags">
-            <!-- 调休工作日标记 -->
+            <!-- 调休工作日标记（红色班字） -->
             <span v-if="isAdditionalWorkday(dateInfo)" class="tag tag-work">
               班
+            </span>
+            <!-- 非工作日休息标记（绿色休字） -->
+            <span v-if="isRestDay(dateInfo)" class="tag tag-rest">
+              休
             </span>
             <!-- 农历节日/节气（右上角） -->
             <span v-if="dateInfo.lunarFestival || dateInfo.solarTerm" class="tag tag-lunar-festival">
@@ -68,15 +72,35 @@ import { computed } from 'vue';
 import { useCalendar } from '../../composables/useCalendar';
 import type { EventCategory } from '../../types';
 
-const { monthDays, weekDayNames, getDateInfo, selectDate } = useCalendar();
+const { monthDays, weekDayNames, getDateInfo, selectDate, selectTimeSlot } = useCalendar();
 
 const monthDaysInfo = computed(() => {
   return monthDays.value.map(date => getDateInfo(date));
 });
 
+function handleDayClick(dateInfo: any): void {
+  selectDate(dateInfo.date);
+  selectTimeSlot({
+    date: dateInfo.dateStr,
+    startTime: undefined,
+    endTime: undefined
+  });
+}
+
 // 判断是否为调休工作日（周末但需要上班）
 function isAdditionalWorkday(dateInfo: any): boolean {
   return dateInfo.isWeekend && dateInfo.isWorkday;
+}
+
+// 判断是否为非工作日休息（周一到周五但休息，或者是周末且不上班）
+function isRestDay(dateInfo: any): boolean {
+  // 如果是工作日，不是休息日
+  if (dateInfo.isWorkday) return false;
+  // 如果是周末且不是调休工作日，是休息日
+  if (dateInfo.isWeekend && !dateInfo.isWorkday) return true;
+  // 如果是周一到周五但不是工作日（法定节假日），是休息日
+  if (!dateInfo.isWeekend && !dateInfo.isWorkday) return true;
+  return false;
 }
 
 function getEventColor(category: EventCategory): string {
@@ -105,15 +129,15 @@ function getEventColor(category: EventCategory): string {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   border-bottom: 1px solid var(--color-border-light);
-  padding: var(--spacing-2) 0;
+  padding: var(--spacing-3) 0;
   flex-shrink: 0;
 }
 
 .weekday {
   text-align: center;
-  font-size: var(--text-xs);
+  font-size: var(--text-md);
   font-weight: var(--font-semibold);
-  color: var(--color-text-light);
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: var(--spacing-2) 0;
@@ -124,13 +148,12 @@ function getEventColor(category: EventCategory): string {
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(6, 1fr);
   flex: 1;
-  overflow: hidden;
 }
 
 .calendar-day {
   border-right: 1px solid var(--color-border-light);
   border-bottom: 1px solid var(--color-border-light);
-  padding: var(--spacing-1);
+  padding: var(--spacing-1\.5);
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -192,16 +215,16 @@ function getEventColor(category: EventCategory): string {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: var(--spacing-0\.5);
+  margin-bottom: var(--spacing-1);
   flex-shrink: 0;
 }
 
 .day-number {
-  font-size: var(--text-base);
+  font-size: var(--text-xl);
   font-weight: var(--font-medium);
   color: var(--color-text);
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -225,8 +248,8 @@ function getEventColor(category: EventCategory): string {
 }
 
 .tag {
-  font-size: 10px;
-  padding: 1px 4px;
+  font-size: var(--text-sm);
+  padding: 2px 5px;
   border-radius: var(--radius-sm);
   font-weight: var(--font-medium);
   line-height: 1.2;
@@ -236,15 +259,22 @@ function getEventColor(category: EventCategory): string {
 .tag-work {
   background-color: #e74c3c;
   color: white;
-  font-size: 9px;
-  padding: 1px 3px;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+.tag-rest {
+  background-color: #27ae60;
+  color: white;
+  font-size: 11px;
+  padding: 2px 4px;
 }
 
 .tag-lunar-festival {
   background-color: var(--color-primary-focus);
   color: var(--color-primary);
-  font-size: 9px;
-  padding: 1px 3px;
+  font-size: 11px;
+  padding: 2px 4px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -259,7 +289,7 @@ function getEventColor(category: EventCategory): string {
 }
 
 .lunar-date {
-  font-size: 10px;
+  font-size: var(--text-sm);
   color: var(--color-lunar);
   line-height: 1;
   overflow: hidden;
@@ -273,7 +303,7 @@ function getEventColor(category: EventCategory): string {
 }
 
 .solar-holiday {
-  font-size: 9px;
+  font-size: var(--text-xs);
   color: var(--color-holiday);
   font-weight: var(--font-medium);
   line-height: 1;
@@ -293,9 +323,9 @@ function getEventColor(category: EventCategory): string {
 }
 
 .event-marker {
-  padding: 1px 4px;
+  padding: 2px 5px;
   border-radius: var(--radius-sm);
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: white;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -311,46 +341,46 @@ function getEventColor(category: EventCategory): string {
 }
 
 .more-events {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  padding: 1px 4px;
+  padding: 2px 5px;
   font-weight: var(--font-medium);
 }
 
 /* 响应式布局 */
 @media (max-width: 1024px) {
   .calendar-day {
-    padding: var(--spacing-0\.5);
+    padding: var(--spacing-1);
   }
   
   .day-number {
-    font-size: var(--text-xs);
-    width: 20px;
-    height: 20px;
+    font-size: var(--text-lg);
+    width: 28px;
+    height: 28px;
   }
   
   .tag {
-    font-size: 9px;
-    padding: 0 2px;
+    font-size: 10px;
+    padding: 1px 3px;
   }
   
   .lunar-date {
-    font-size: 9px;
+    font-size: var(--text-xs);
   }
   
   .solar-holiday {
-    font-size: 8px;
+    font-size: 10px;
   }
   
   .event-marker {
-    font-size: 9px;
-    padding: 0 3px;
+    font-size: 10px;
+    padding: 1px 3px;
   }
 }
 
 @media (max-width: 768px) {
   .weekday {
-    font-size: 10px;
+    font-size: var(--text-sm);
   }
   
   .day-header {

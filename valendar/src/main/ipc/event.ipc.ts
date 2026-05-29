@@ -48,12 +48,12 @@ export function registerEventHandlers(): void {
       const event = await storageService.createEvent(input);
 
       if (event.alarm?.isEnabled && event.alarm.before > 0) {
-        const eventDate = event.startTime
-          ? `${event.startDate}T${event.startTime}`
-          : `${event.startDate}T00:00`;
-        const triggerTime = new Date(new Date(eventDate).getTime() - event.alarm.before * 60 * 1000);
+        const eventDateTime = event.startTime
+          ? new Date(`${event.startDate}T${event.startTime}`)
+          : new Date(`${event.startDate}T00:00`);
 
-        if (triggerTime > new Date()) {
+        if (eventDateTime > new Date()) {
+          const triggerTime = new Date(eventDateTime.getTime() - event.alarm.before * 60 * 1000);
           alarmService.createAlarmForEvent(
             event.id,
             triggerTime.toISOString(),
@@ -78,12 +78,12 @@ export function registerEventHandlers(): void {
         alarmService.deleteAlarmForEvent(id);
 
         if (event.alarm?.isEnabled && event.alarm.before > 0) {
-          const eventDate = event.startTime
-            ? `${event.startDate}T${event.startTime}`
-            : `${event.startDate}T00:00`;
-          const triggerTime = new Date(new Date(eventDate).getTime() - event.alarm.before * 60 * 1000);
+          const eventDateTime = event.startTime
+            ? new Date(`${event.startDate}T${event.startTime}`)
+            : new Date(`${event.startDate}T00:00`);
 
-          if (triggerTime > new Date()) {
+          if (eventDateTime > new Date()) {
+            const triggerTime = new Date(eventDateTime.getTime() - event.alarm.before * 60 * 1000);
             alarmService.createAlarmForEvent(
               event.id,
               triggerTime.toISOString(),
@@ -117,6 +117,60 @@ export function registerEventHandlers(): void {
       return await storageService.deleteEvents(ids);
     } catch (error) {
       console.error('Error deleting events:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('event:search', async (_, keyword: string) => {
+    try {
+      return await storageService.searchEvents(keyword);
+    } catch (error) {
+      console.error('Error searching events:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('event:getByDateRange', async (_, startDate: string, endDate: string) => {
+    try {
+      return await storageService.getEventsByDateRange(startDate, endDate);
+    } catch (error) {
+      console.error('Error getting events by date range:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('event:getByCategory', async (_, category: string) => {
+    try {
+      return await storageService.getEventsByCategory(category);
+    } catch (error) {
+      console.error('Error getting events by category:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('event:getStats', async () => {
+    try {
+      return await storageService.getEventStats();
+    } catch (error) {
+      console.error('Error getting event stats:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('event:getBackups', async () => {
+    try {
+      return await storageService.getBackupList();
+    } catch (error) {
+      console.error('Error getting backups:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('event:restoreBackup', async (_, backupFile?: string) => {
+    try {
+      return await storageService.restoreFromBackup(backupFile);
+    } catch (error) {
+      console.error('Error restoring backup:', error);
       throw error;
     }
   });

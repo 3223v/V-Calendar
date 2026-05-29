@@ -31,7 +31,7 @@ export function registerAlarmHandlers(): void {
     try {
       const settings = await storageService.getSettings();
       const snoozeMinutes = minutes ?? settings.snoozeMinutes;
-      alarmService.snoozeAlarm(id, snoozeMinutes);
+      await alarmService.snoozeAlarm(id, snoozeMinutes);
       return true;
     } catch (error) {
       console.error('Error snoozing alarm:', error);
@@ -41,7 +41,7 @@ export function registerAlarmHandlers(): void {
 
   ipcMain.handle('alarm:dismiss', async (_, id: string) => {
     try {
-      alarmService.dismissAlarm(id);
+      await alarmService.dismissAlarm(id);
       return true;
     } catch (error) {
       console.error('Error dismissing alarm:', error);

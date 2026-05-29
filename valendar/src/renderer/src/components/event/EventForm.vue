@@ -115,12 +115,14 @@
           </select>
         </div>
 
+        <div v-if="submitError" class="form-error">{{ submitError }}</div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" @click="handleClose">
             取消
           </button>
-          <button type="submit" class="btn btn-primary">
-            {{ isEdit ? '保存' : '创建' }}
+          <button type="submit" class="btn btn-primary" :disabled="submitting">
+            {{ submitting ? '创建中...' : (isEdit ? '保存' : '创建') }}
           </button>
         </div>
       </form>
@@ -129,12 +131,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import dayjs from 'dayjs';
 import type { CalendarEvent, EventInput, EventCategory } from '../../types';
+import { useEventStore } from '../../stores/event.store';
 
 const props = defineProps<{
   event?: CalendarEvent | null;
+  defaultDate?: string;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
 }>();
 
 const emit = defineEmits<{
@@ -142,16 +148,19 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
+const eventStore = useEventStore();
 const isEdit = computed(() => !!props.event);
+const submitError = ref('');
+const submitting = ref(false);
 
 const formData = ref({
   title: '',
   description: '',
-  startDate: dayjs().format('YYYY-MM-DD'),
-  endDate: dayjs().format('YYYY-MM-DD'),
-  startTime: '',
-  endTime: '',
-  isAllDay: true,
+  startDate: props.defaultDate || dayjs().format('YYYY-MM-DD'),
+  endDate: props.defaultDate || dayjs().format('YYYY-MM-DD'),
+  startTime: props.defaultStartTime || '',
+  endTime: props.defaultEndTime || '',
+  isAllDay: !(props.defaultStartTime),
   category: 'personal' as EventCategory,
   location: '',
   alarmBefore: 15
@@ -178,8 +187,23 @@ onMounted(() => {
 });
 
 function handleSubmit(): void {
+  console.log('[EventForm] handleSubmit called');
+  submitError.value = '';
+
+  if (!formData.value.title.trim()) {
+    submitError.value = '请输入事件标题';
+    return;
+  }
+
+  if (!formData.value.startDate || !formData.value.endDate) {
+    submitError.value = '请选择开始和结束日期';
+    return;
+  }
+
+  submitting.value = true;
+
   const eventInput: EventInput = {
-    title: formData.value.title,
+    title: formData.value.title.trim(),
     description: formData.value.description || undefined,
     startDate: formData.value.startDate,
     endDate: formData.value.endDate,
@@ -195,8 +219,23 @@ function handleSubmit(): void {
     } : undefined
   };
 
+  console.log('[EventForm] emitting submit:', eventInput.title);
   emit('submit', eventInput);
 }
+
+watch(() => eventStore.error, (newError) => {
+  if (newError) {
+    console.error('[EventForm] store error:', newError);
+    submitError.value = newError;
+    submitting.value = false;
+  }
+});
+
+watch(() => eventStore.loading, (isLoading) => {
+  if (!isLoading) {
+    submitting.value = false;
+  }
+});
 
 function handleClose(): void {
   emit('close');
@@ -329,6 +368,16 @@ function handleClose(): void {
 .form-actions .btn-secondary:hover {
   background-color: var(--color-surface-hover);
   border-color: var(--color-text-light);
+}
+
+.form-error {
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-lg);
+  color: #dc2626;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
 }
 
 textarea.input {

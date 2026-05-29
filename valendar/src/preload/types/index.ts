@@ -7,6 +7,17 @@ export interface EventAPI {
   update: (id: string, input: EventInput) => Promise<CalendarEvent | null>;
   delete: (id: string) => Promise<boolean>;
   deleteMany: (ids: string[]) => Promise<number>;
+  search: (keyword: string) => Promise<CalendarEvent[]>;
+  getByDateRange: (startDate: string, endDate: string) => Promise<CalendarEvent[]>;
+  getByCategory: (category: string) => Promise<CalendarEvent[]>;
+  getStats: () => Promise<{
+    total: number;
+    byCategory: Record<string, number>;
+    upcoming: number;
+    past: number;
+  }>;
+  getBackups: () => Promise<Array<{ file: string; date: string; size: number }>>;
+  restoreBackup: (backupFile?: string) => Promise<boolean>;
 }
 
 export interface AlarmAPI {
