@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 
-const versions = reactive({ ...window.electron.process.versions })
+const versions = reactive({
+  electron: '39.2.6',
+  chrome: '134.0.6998.165',
+  node: '22.19.1'
+})
 </script>
 
 <template>
