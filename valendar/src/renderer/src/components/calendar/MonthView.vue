@@ -20,8 +20,10 @@
         @click="selectDate(dateInfo.date)"
       >
         <div class="day-header">
-          <span class="day-number">{{ dateInfo.day }}</span>
-          <span v-if="dateInfo.lunarDateString" class="lunar-date">
+          <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">
+            {{ dateInfo.day }}
+          </span>
+          <span v-if="dateInfo.lunarDateString && !dateInfo.isCurrentMonth" class="lunar-date">
             {{ dateInfo.lunarDateString }}
           </span>
         </div>
@@ -30,7 +32,7 @@
         </div>
         <div v-if="dateInfo.eventCount > 0" class="event-markers">
           <div
-            v-for="(event, idx) in dateInfo.events.slice(0, 3)"
+            v-for="(event, idx) in dateInfo.events.slice(0, 2)"
             :key="idx"
             class="event-marker"
             :style="{ backgroundColor: getEventColor(event.category) }"
@@ -38,8 +40,8 @@
           >
             <span class="event-title">{{ event.title }}</span>
           </div>
-          <div v-if="dateInfo.eventCount > 3" class="more-events">
-            +{{ dateInfo.eventCount - 3 }}
+          <div v-if="dateInfo.eventCount > 2" class="more-events">
+            +{{ dateInfo.eventCount - 2 }} 更多
           </div>
         </div>
       </div>
@@ -76,40 +78,47 @@ function getEventColor(category: EventCategory): string {
   flex-direction: column;
   height: 100%;
   background-color: var(--color-background);
+  overflow: hidden;
 }
 
 .calendar-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  padding: var(--spacing-2) 0;
+  flex-shrink: 0;
 }
 
 .weekday {
   text-align: center;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  padding: var(--spacing-sm) 0;
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--spacing-2) 0;
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .calendar-day {
-  border-right: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--spacing-sm);
-  min-height: 100px;
+  border-right: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: var(--spacing-1\.5);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-fast);
+  position: relative;
+  overflow: hidden;
 }
 
 .calendar-day:hover {
@@ -122,27 +131,37 @@ function getEventColor(category: EventCategory): string {
 
 .calendar-day.other-month {
   background-color: var(--color-surface);
-  opacity: 0.6;
 }
 
-.calendar-day.today .day-number {
-  background-color: var(--color-primary);
-  color: white;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.calendar-day.other-month .day-number {
+  color: var(--color-text-light);
+}
+
+.calendar-day.other-month .event-markers {
+  opacity: 0.5;
+}
+
+.calendar-day.today {
+  background-color: rgba(44, 62, 80, 0.03);
 }
 
 .calendar-day.selected {
-  background-color: var(--color-surface);
-  border: 2px solid var(--color-primary);
+  background-color: rgba(44, 62, 80, 0.06);
+}
+
+.calendar-day.selected::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--color-primary);
 }
 
 .calendar-day.holiday .day-number {
   color: var(--color-holiday);
+  font-weight: var(--font-semibold);
 }
 
 .calendar-day.weekend .day-number {
@@ -151,30 +170,46 @@ function getEventColor(category: EventCategory): string {
 
 .day-header {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-xs);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-1);
+  flex-shrink: 0;
 }
 
 .day-number {
-  font-size: 16px;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--color-text);
-  margin-bottom: 2px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.day-number.day-today {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-weight: var(--font-semibold);
 }
 
 .lunar-date {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--color-lunar);
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .holiday-name {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--color-holiday);
-  font-weight: 500;
-  margin-bottom: var(--spacing-xs);
+  font-weight: var(--font-medium);
+  margin-bottom: var(--spacing-0\.5);
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .event-markers {
@@ -186,13 +221,14 @@ function getEventColor(category: EventCategory): string {
 }
 
 .event-marker {
-  padding: 2px 4px;
-  border-radius: 2px;
-  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   color: white;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.4;
 }
 
 .event-title {
@@ -203,8 +239,41 @@ function getEventColor(category: EventCategory): string {
 }
 
 .more-events {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
-  padding: 2px 4px;
+  padding: 1px 4px;
+  font-weight: var(--font-medium);
+}
+
+/* 响应式布局 */
+@media (max-width: 1024px) {
+  .calendar-day {
+    padding: var(--spacing-1);
+  }
+  
+  .day-number {
+    font-size: var(--text-xs);
+    width: 22px;
+    height: 22px;
+  }
+  
+  .event-marker {
+    font-size: 10px;
+    padding: 0 3px;
+  }
+}
+
+@media (max-width: 768px) {
+  .weekday {
+    font-size: 10px;
+  }
+  
+  .day-header {
+    margin-bottom: 0;
+  }
+  
+  .lunar-date {
+    display: none;
+  }
 }
 </style>

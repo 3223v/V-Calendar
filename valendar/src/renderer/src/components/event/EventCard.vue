@@ -93,76 +93,104 @@ function handleDelete(): void {
 <style scoped>
 .event-card {
   background-color: var(--color-surface);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
   border-left: 4px solid;
-  transition: all 0.2s ease;
+  transition: var(--transition-base);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.event-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+  opacity: 0;
+  transition: var(--transition-base);
+  pointer-events: none;
 }
 
 .event-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+  border-left-width: 6px;
+}
+
+.event-card:hover::before {
+  opacity: 1;
 }
 
 .event-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-3);
 }
 
 .event-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
   color: var(--color-text);
   flex: 1;
-  margin-right: var(--spacing-sm);
+  margin-right: var(--spacing-3);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
 }
 
 .event-actions {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-1);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transform: translateY(4px);
+  transition: var(--transition-fast);
 }
 
 .event-card:hover .event-actions {
   opacity: 1;
+  transform: translateY(0);
 }
 
 .action-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
   color: var(--color-text-secondary);
-  transition: all 0.2s ease;
+  transition: var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
 }
 
 .action-btn:hover {
   background-color: var(--color-surface-hover);
   color: var(--color-text);
+  border-color: var(--color-border);
 }
 
 .action-btn.delete:hover {
   background-color: var(--color-error);
-  color: white;
+  color: var(--color-text-inverse);
+  border-color: var(--color-error);
 }
 
 .event-details {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-3);
 }
 
 .event-description {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--color-text-secondary);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -173,18 +201,57 @@ function handleDelete(): void {
 .event-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-2);
 }
 
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: var(--spacing-1);
+  font-size: var(--text-sm);
   color: var(--color-text-secondary);
+  background-color: var(--color-surface-hover);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  transition: var(--transition-fast);
+}
+
+.meta-item:hover {
+  background-color: var(--color-surface-active);
+  color: var(--color-text);
 }
 
 .meta-icon {
-  font-size: 14px;
+  font-size: var(--text-base);
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .event-card {
+    padding: var(--spacing-3);
+  }
+  
+  .event-header {
+    margin-bottom: var(--spacing-2);
+  }
+  
+  .event-title {
+    font-size: var(--text-md);
+  }
+  
+  .event-meta {
+    gap: var(--spacing-1);
+  }
+  
+  .meta-item {
+    font-size: var(--text-xs);
+    padding: var(--spacing-0\.5) var(--spacing-1\.5);
+  }
+  
+  .action-btn {
+    width: 28px;
+    height: 28px;
+  }
 }
 </style>

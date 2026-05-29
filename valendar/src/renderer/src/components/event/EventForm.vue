@@ -209,50 +209,57 @@ function handleClose(): void {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .modal-title {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
   color: var(--color-text);
+  letter-spacing: -0.02em;
 }
 
 .close-btn {
-  width: 32px;
-  height: 32px;
-  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
   color: var(--color-text-secondary);
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
   background-color: var(--color-surface-hover);
   color: var(--color-text);
+  transform: rotate(90deg);
 }
 
 .event-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-5);
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-2);
 }
 
 .form-group label {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--text-md);
+  font-weight: var(--font-medium);
   color: var(--color-text);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-md);
+  gap: var(--spacing-4);
 }
 
 .checkbox-group {
@@ -262,27 +269,103 @@ function handleClose(): void {
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-3);
   cursor: pointer;
+  padding: var(--spacing-3) var(--spacing-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+}
+
+.checkbox-label:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-focus);
 }
 
 .checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.checkbox-label span {
+  font-size: var(--text-md);
+  font-weight: var(--font-medium);
 }
 
 .form-actions {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--spacing-3);
   justify-content: flex-end;
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.form-actions .btn {
+  min-width: 100px;
+  padding: var(--spacing-3) var(--spacing-6);
+  font-size: var(--text-md);
+  font-weight: var(--font-semibold);
+  border-radius: var(--radius-lg);
+}
+
+.form-actions .btn-primary {
+  box-shadow: var(--shadow-md);
+}
+
+.form-actions .btn-primary:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.form-actions .btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+}
+
+.form-actions .btn-secondary:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-text-light);
 }
 
 textarea.input {
   resize: vertical;
   min-height: 80px;
+  line-height: var(--leading-relaxed);
+}
+
+.form-group .input {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-md);
+  transition: all var(--transition-base);
+  border: 1.5px solid var(--color-border);
+}
+
+.form-group .input:hover {
+  border-color: var(--color-text-light);
+  box-shadow: var(--shadow-xs);
+}
+
+.form-group .input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-focus), var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.form-group .input::placeholder {
+  color: var(--color-text-light);
+  font-weight: var(--font-normal);
+}
+
+.form-group select.input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237F8C8D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-3) center;
+  padding-right: var(--spacing-10);
 }
 </style>

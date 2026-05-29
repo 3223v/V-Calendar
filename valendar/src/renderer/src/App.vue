@@ -2,10 +2,20 @@
   <div class="app">
     <header class="app-header">
       <div class="header-left">
-        <button class="nav-btn" @click="handlePrev">←</button>
+        <div class="nav-group">
+          <button class="btn btn-icon btn-ghost" @click="handlePrev" aria-label="上一个">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="btn btn-icon btn-ghost" @click="handleNext" aria-label="下一个">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
         <h1 class="current-date">{{ formattedCurrentDate }}</h1>
-        <button class="nav-btn" @click="handleNext">→</button>
-        <button class="btn btn-secondary" @click="goToToday">今天</button>
+        <button class="btn btn-secondary btn-sm" @click="goToToday">今天</button>
       </div>
       <div class="header-center">
         <div class="view-switcher">
@@ -21,14 +31,26 @@
         </div>
       </div>
       <div class="header-right">
-        <button class="icon-btn" @click="handleImport" title="导入">
-          📥
+        <button class="btn btn-icon btn-ghost" @click="handleImport" title="导入数据">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
         </button>
-        <button class="icon-btn" @click="handleExport" title="导出">
-          📤
+        <button class="btn btn-icon btn-ghost" @click="handleExport" title="导出数据">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
         </button>
-        <button class="icon-btn" @click="handleSettings" title="设置">
-          ⚙️
+        <div class="header-divider"></div>
+        <button class="btn btn-icon btn-ghost" @click="handleSettings" title="设置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
         </button>
       </div>
     </header>
@@ -50,12 +72,14 @@
       </aside>
     </main>
 
-    <EventForm
-      v-if="showEventForm"
-      :event="editingEvent"
-      @submit="handleFormSubmit"
-      @close="closeEventForm"
-    />
+    <Transition name="fade">
+      <EventForm
+        v-if="showEventForm"
+        :event="editingEvent"
+        @submit="handleFormSubmit"
+        @close="closeEventForm"
+      />
+    </Transition>
 
     <AlarmPopup />
   </div>
@@ -196,66 +220,67 @@ function handleSettings(): void {
   flex-direction: column;
   height: 100vh;
   background-color: var(--color-background);
+  overflow: hidden;
 }
 
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-3) var(--spacing-5);
   background-color: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--color-border-light);
+  min-height: 56px;
+  flex-shrink: 0;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-3);
+}
+
+.nav-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  background-color: var(--color-background);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-0\.5);
 }
 
 .current-date {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-semibold);
   color: var(--color-text);
-  min-width: 200px;
-}
-
-.nav-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  font-size: 18px;
-  color: var(--color-text);
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.nav-btn:hover {
-  background-color: var(--color-surface-hover);
+  letter-spacing: -0.025em;
+  min-width: 180px;
 }
 
 .header-center {
   display: flex;
   align-items: center;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .view-switcher {
   display: flex;
-  gap: 2px;
   background-color: var(--color-background);
-  border-radius: var(--radius-sm);
-  padding: 2px;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-0\.5);
+  border: 1px solid var(--color-border-light);
 }
 
 .view-btn {
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-1\.5) var(--spacing-3\.5);
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--color-text-secondary);
-  transition: all 0.2s ease;
+  transition: all var(--transition-base);
+  position: relative;
 }
 
 .view-btn:hover {
@@ -265,44 +290,110 @@ function handleSettings(): void {
 .view-btn.active {
   background-color: var(--color-surface);
   color: var(--color-text);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-xs);
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-1);
 }
 
-.icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-sm);
-  font-size: 20px;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-btn:hover {
-  background-color: var(--color-surface-hover);
+.header-divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--color-border);
+  margin: 0 var(--spacing-2);
 }
 
 .app-main {
   display: flex;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 .calendar-section {
   flex: 1;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .events-section {
-  width: 400px;
-  border-left: 1px solid var(--color-border);
+  width: 360px;
+  min-width: 300px;
+  max-width: 420px;
+  border-left: 1px solid var(--color-border-light);
   overflow: hidden;
+  background-color: var(--color-surface);
+  flex-shrink: 0;
+}
+
+/* 响应式布局 */
+@media (max-width: 1200px) {
+  .events-section {
+    width: 320px;
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .header-center {
+    position: static;
+    transform: none;
+  }
+
+  .app-header {
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+
+  .events-section {
+    width: 280px;
+    min-width: 260px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .current-date {
+    font-size: var(--text-xl);
+    min-width: auto;
+  }
+
+  .app-main {
+    flex-direction: column;
+  }
+
+  .events-section {
+    width: 100%;
+    max-width: 100%;
+    height: 40vh;
+    border-left: none;
+    border-top: 1px solid var(--color-border-light);
+  }
+}
+
+@media (max-width: 640px) {
+  .header-left {
+    flex: 1;
+  }
+
+  .nav-group {
+    order: -1;
+  }
+
+  .header-right {
+    gap: var(--spacing-0);
+  }
+
+  .header-divider {
+    display: none;
+  }
 }
 </style>
