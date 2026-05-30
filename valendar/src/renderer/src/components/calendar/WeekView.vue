@@ -7,16 +7,18 @@
         :key="dateInfo.dateStr"
         class="weekday-header"
         :class="{
-          'today': dateInfo.isToday,
-          'selected': dateInfo.isSelected,
+          today: dateInfo.isToday,
+          selected: dateInfo.isSelected,
           'is-holiday': dateInfo.isHoliday,
-          'weekend': dateInfo.isWeekend
+          weekend: dateInfo.isWeekend
         }"
         @click="handleHeaderClick(dateInfo)"
       >
         <div class="weekday-name">{{ dateInfo.dayName }}</div>
         <div class="weekday-date">
-          <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">{{ dateInfo.day }}</span>
+          <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">{{
+            dateInfo.day
+          }}</span>
           <span v-if="dateInfo.lunarDateString" class="lunar-date">
             {{ dateInfo.lunarDateString }}
           </span>
@@ -34,11 +36,17 @@
           v-for="dateInfo in weekDaysInfo"
           :key="dateInfo.dateStr"
           class="day-column"
-          :class="{ 'today': dateInfo.isToday }"
+          :class="{ today: dateInfo.isToday }"
         >
-          <div v-for="hour in 24" :key="hour" class="hour-slot" :class="{ 'selected-slot': isTimeSlotSelected(dateInfo.dateStr, hour - 1) }" @click="handleTimeSlotClick(dateInfo.date, hour - 1)">
+          <div
+            v-for="hour in 24"
+            :key="hour"
+            class="hour-slot"
+            :class="{ 'selected-slot': isTimeSlotSelected(dateInfo.dateStr, hour - 1) }"
+            @click="handleTimeSlotClick(dateInfo.date, hour - 1)"
+          >
             <div
-              v-for="event in getEventsForHour(dateInfo.date, hour - 1)"
+              v-for="event in getEventForHour(getDateInfo(dateInfo.date).events, hour - 1)"
               :key="event.id"
               class="event-block"
               :style="{
@@ -61,95 +69,62 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import dayjs from 'dayjs';
-import { useCalendar } from '../../composables/useCalendar';
-import type { CalendarEvent, EventCategory } from '../../types';
+import { computed } from 'vue'
+import dayjs from 'dayjs'
+import { useCalendar } from '../../composables/useCalendar'
+import {
+  getEventColor,
+  formatHour,
+  getEventTop,
+  getEventHeight,
+  getEventForHour
+} from '../../utils/event-display'
+import type { CalendarEvent } from '../../types'
 
 const emit = defineEmits<{
-  (e: 'event-click', event: CalendarEvent): void;
-}>();
+  (e: 'event-click', event: CalendarEvent): void
+}>()
 
-const { weekDays, getDateInfo, selectDate, selectTimeSlot, selectedTimeSlot } = useCalendar();
+const { weekDays, getDateInfo, selectDate, selectTimeSlot, selectedTimeSlot } = useCalendar()
 
 const weekDaysInfo = computed(() => {
-  return weekDays.value.map(date => {
-    const info = getDateInfo(date);
+  return weekDays.value.map((date) => {
+    const info = getDateInfo(date)
     return {
       ...info,
       dayName: date.format('ddd'),
       day: date.date()
-    };
-  });
-});
-
-function formatHour(hour: number): string {
-  return `${hour.toString().padStart(2, '0')}:00`;
-}
-
-function getEventsForHour(date: dayjs.Dayjs, hour: number): CalendarEvent[] {
-  const events = getDateInfo(date).events.filter(e => {
-    if (!e.startTime) return false;
-    const eventHour = parseInt(e.startTime.split(':')[0], 10);
-    return eventHour === hour;
-  });
-  return events;
-}
-
-function getEventTop(event: CalendarEvent): string {
-  if (!event.startTime) return '0px';
-  const [hours, minutes] = event.startTime.split(':').map(Number);
-  return `${(hours * 60 + minutes) / 60 * 60}px`;
-}
-
-function getEventHeight(event: CalendarEvent): string {
-  if (!event.startTime || !event.endTime) return '60px';
-  const [startHours, startMinutes] = event.startTime.split(':').map(Number);
-  const [endHours, endMinutes] = event.endTime.split(':').map(Number);
-  const startMinutesTotal = startHours * 60 + startMinutes;
-  const endMinutesTotal = endHours * 60 + endMinutes;
-  const duration = Math.max(endMinutesTotal - startMinutesTotal, 30);
-  return `${(duration / 60) * 60}px`;
-}
-
-function getEventColor(category: EventCategory): string {
-  const colors: Record<EventCategory, string> = {
-    work: 'var(--color-event-work)',
-    personal: 'var(--color-event-personal)',
-    holiday: 'var(--color-event-holiday)',
-    important: 'var(--color-event-important)',
-    custom: 'var(--color-primary)'
-  };
-  return colors[category] || colors.personal;
-}
+    }
+  })
+})
 
 function handleEventClick(event: CalendarEvent): void {
-  emit('event-click', event);
+  emit('event-click', event)
 }
 
 function isTimeSlotSelected(dateStr: string, hour: number): boolean {
-  if (!selectedTimeSlot.value) return false;
-  if (selectedTimeSlot.value.date !== dateStr) return false;
-  if (!selectedTimeSlot.value.startTime) return true;
-  const slotHour = parseInt(selectedTimeSlot.value.startTime.split(':')[0], 10);
-  return slotHour === hour;
+  if (!selectedTimeSlot.value) return false
+  if (selectedTimeSlot.value.date !== dateStr) return false
+  if (!selectedTimeSlot.value.startTime) return true
+  const slotHour = parseInt(selectedTimeSlot.value.startTime.split(':')[0], 10)
+  return slotHour === hour
 }
 
 function handleHeaderClick(dateInfo: any): void {
-  selectDate(dateInfo.date);
+  selectDate(dateInfo.date)
   selectTimeSlot({
     date: dateInfo.dateStr
-  });
+  })
 }
 
 function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
-  const dateStr = date.format('YYYY-MM-DD');
-  selectDate(date);
+  const dateStr = date.format('YYYY-MM-DD')
+  selectDate(date)
   selectTimeSlot({
     date: dateStr,
     startTime: `${hour.toString().padStart(2, '0')}:00`,
     endTime: `${(hour + 1).toString().padStart(2, '0')}:00`
-  });
+  })
 }
 </script>
 
@@ -341,17 +316,17 @@ function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
   .time-column {
     width: 60px;
   }
-  
+
   .day-number {
     font-size: var(--text-lg);
     width: 28px;
     height: 28px;
   }
-  
+
   .weekday-name {
     font-size: 11px;
   }
-  
+
   .lunar-date {
     display: none;
   }
@@ -362,13 +337,13 @@ function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
   .time-column {
     width: 50px;
   }
-  
+
   .day-number {
     font-size: var(--text-md);
     width: 24px;
     height: 24px;
   }
-  
+
   .time-slot {
     font-size: 10px;
   }

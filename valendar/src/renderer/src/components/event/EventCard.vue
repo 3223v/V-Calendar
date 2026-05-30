@@ -3,12 +3,8 @@
     <div class="event-header">
       <h3 class="event-title">{{ event.title }}</h3>
       <div class="event-actions">
-        <button class="action-btn" @click="handleEdit" title="编辑">
-          ✎
-        </button>
-        <button class="action-btn delete" @click="handleDelete" title="删除">
-          ×
-        </button>
+        <button class="action-btn" @click="handleEdit" title="编辑">✎</button>
+        <button class="action-btn delete" @click="handleDelete" title="删除">×</button>
       </div>
     </div>
     <div class="event-details">
@@ -38,18 +34,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import dayjs from 'dayjs';
-import type { CalendarEvent, EventCategory } from '../../types';
+import { computed } from 'vue'
+import dayjs from 'dayjs'
+import type { CalendarEvent, EventCategory } from '../../types'
 
 const props = defineProps<{
-  event: CalendarEvent;
-}>();
+  event: CalendarEvent
+}>()
 
 const emit = defineEmits<{
-  (e: 'edit', event: CalendarEvent): void;
-  (e: 'delete', event: CalendarEvent): void;
-}>();
+  (e: 'edit', event: CalendarEvent): void
+  (e: 'delete', event: CalendarEvent): void
+}>()
 
 const eventColor = computed(() => {
   const colors: Record<EventCategory, string> = {
@@ -58,34 +54,34 @@ const eventColor = computed(() => {
     holiday: 'var(--color-event-holiday)',
     important: 'var(--color-event-important)',
     custom: 'var(--color-primary)'
-  };
-  return colors[props.event.category] || colors.personal;
-});
+  }
+  return colors[props.event.category] || colors.personal
+})
 
 const formattedDateRange = computed(() => {
-  const start = dayjs(props.event.startDate);
-  const end = dayjs(props.event.endDate);
+  const start = dayjs(props.event.startDate)
+  const end = dayjs(props.event.endDate)
 
   if (props.event.startDate === props.event.endDate) {
-    return start.format('YYYY年M月D日');
+    return start.format('YYYY年M月D日')
   }
 
-  return `${start.format('M月D日')} - ${end.format('M月D日')}`;
-});
+  return `${start.format('M月D日')} - ${end.format('M月D日')}`
+})
 
 const formattedTimeRange = computed(() => {
-  if (!props.event.startTime) return '';
-  if (!props.event.endTime) return props.event.startTime;
-  return `${props.event.startTime} - ${props.event.endTime}`;
-});
+  if (!props.event.startTime) return ''
+  if (!props.event.endTime) return props.event.startTime
+  return `${props.event.startTime} - ${props.event.endTime}`
+})
 
 function handleEdit(): void {
-  emit('edit', props.event);
+  emit('edit', props.event)
 }
 
 function handleDelete(): void {
   if (confirm('确定要删除这个事件吗？')) {
-    emit('delete', props.event);
+    emit('delete', props.event)
   }
 }
 </script>
@@ -231,24 +227,24 @@ function handleDelete(): void {
   .event-card {
     padding: var(--spacing-3);
   }
-  
+
   .event-header {
     margin-bottom: var(--spacing-2);
   }
-  
+
   .event-title {
     font-size: var(--text-md);
   }
-  
+
   .event-meta {
     gap: var(--spacing-1);
   }
-  
+
   .meta-item {
     font-size: var(--text-xs);
     padding: var(--spacing-0\.5) var(--spacing-1\.5);
   }
-  
+
   .action-btn {
     width: 28px;
     height: 28px;

@@ -12,10 +12,10 @@
         class="calendar-day"
         :class="{
           'other-month': !dateInfo.isCurrentMonth,
-          'today': dateInfo.isToday,
-          'selected': dateInfo.isSelected,
+          today: dateInfo.isToday,
+          selected: dateInfo.isSelected,
           'is-holiday': dateInfo.isHoliday,
-          'weekend': dateInfo.isWeekend
+          weekend: dateInfo.isWeekend
         }"
         @click="handleDayClick(dateInfo)"
       >
@@ -25,15 +25,14 @@
           </span>
           <div class="day-tags">
             <!-- 调休工作日标记（红色班字） -->
-            <span v-if="isAdditionalWorkday(dateInfo)" class="tag tag-work">
-              班
-            </span>
+            <span v-if="isAdditionalWorkday(dateInfo)" class="tag tag-work"> 班 </span>
             <!-- 非工作日休息标记（绿色休字） -->
-            <span v-if="isRestDay(dateInfo)" class="tag tag-rest">
-              休
-            </span>
+            <span v-if="isRestDay(dateInfo)" class="tag tag-rest"> 休 </span>
             <!-- 农历节日/节气（右上角） -->
-            <span v-if="dateInfo.lunarFestival || dateInfo.solarTerm" class="tag tag-lunar-festival">
+            <span
+              v-if="dateInfo.lunarFestival || dateInfo.solarTerm"
+              class="tag tag-lunar-festival"
+            >
               {{ dateInfo.lunarFestival || dateInfo.solarTerm }}
             </span>
           </div>
@@ -68,50 +67,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useCalendar } from '../../composables/useCalendar';
-import type { EventCategory } from '../../types';
+import { computed } from 'vue'
+import { useCalendar } from '../../composables/useCalendar'
+import { getEventColor } from '../../utils/event-display'
 
-const { monthDays, weekDayNames, getDateInfo, selectDate, selectTimeSlot } = useCalendar();
+const { monthDays, weekDayNames, getDateInfo, selectDate, selectTimeSlot } = useCalendar()
 
 const monthDaysInfo = computed(() => {
-  return monthDays.value.map(date => getDateInfo(date));
-});
+  return monthDays.value.map((date) => getDateInfo(date))
+})
 
 function handleDayClick(dateInfo: any): void {
-  selectDate(dateInfo.date);
+  selectDate(dateInfo.date)
   selectTimeSlot({
     date: dateInfo.dateStr,
     startTime: undefined,
     endTime: undefined
-  });
+  })
 }
 
 // 判断是否为调休工作日（周末但需要上班）
 function isAdditionalWorkday(dateInfo: any): boolean {
-  return dateInfo.isWeekend && dateInfo.isWorkday;
+  return dateInfo.isWeekend && dateInfo.isWorkday
 }
 
 // 判断是否为非工作日休息（周一到周五但休息，或者是周末且不上班）
 function isRestDay(dateInfo: any): boolean {
   // 如果是工作日，不是休息日
-  if (dateInfo.isWorkday) return false;
+  if (dateInfo.isWorkday) return false
   // 如果是周末且不是调休工作日，是休息日
-  if (dateInfo.isWeekend && !dateInfo.isWorkday) return true;
+  if (dateInfo.isWeekend && !dateInfo.isWorkday) return true
   // 如果是周一到周五但不是工作日（法定节假日），是休息日
-  if (!dateInfo.isWeekend && !dateInfo.isWorkday) return true;
-  return false;
-}
-
-function getEventColor(category: EventCategory): string {
-  const colors: Record<EventCategory, string> = {
-    work: 'var(--color-event-work)',
-    personal: 'var(--color-event-personal)',
-    holiday: 'var(--color-event-holiday)',
-    important: 'var(--color-event-important)',
-    custom: 'var(--color-primary)'
-  };
-  return colors[category] || colors.personal;
+  if (!dateInfo.isWeekend && !dateInfo.isWorkday) return true
+  return false
 }
 </script>
 
@@ -352,26 +340,26 @@ function getEventColor(category: EventCategory): string {
   .calendar-day {
     padding: var(--spacing-1);
   }
-  
+
   .day-number {
     font-size: var(--text-lg);
     width: 28px;
     height: 28px;
   }
-  
+
   .tag {
     font-size: 10px;
     padding: 1px 3px;
   }
-  
+
   .lunar-date {
     font-size: var(--text-xs);
   }
-  
+
   .solar-holiday {
     font-size: 10px;
   }
-  
+
   .event-marker {
     font-size: 10px;
     padding: 1px 3px;
@@ -382,15 +370,15 @@ function getEventColor(category: EventCategory): string {
   .weekday {
     font-size: var(--text-sm);
   }
-  
+
   .day-header {
     margin-bottom: 0;
   }
-  
+
   .day-tags {
     display: none;
   }
-  
+
   .solar-holiday {
     display: none;
   }

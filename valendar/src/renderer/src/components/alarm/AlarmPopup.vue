@@ -16,41 +16,37 @@
         <div class="alarm-message">{{ activeAlarm?.message }}</div>
       </div>
       <div class="alarm-actions">
-        <button class="alarm-btn alarm-btn-secondary" @click="handleSnooze">
-          稍后提醒
-        </button>
-        <button class="alarm-btn alarm-btn-primary" @click="handleDismiss">
-          知道了
-        </button>
+        <button class="alarm-btn alarm-btn-secondary" @click="handleSnooze">稍后提醒</button>
+        <button class="alarm-btn alarm-btn-primary" @click="handleDismiss">知道了</button>
       </div>
     </div>
   </Transition>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useAlarm } from '../../composables/useAlarm';
+import { computed } from 'vue'
+import { useAlarm } from '../../composables/useAlarm'
 
-const { activeAlarm, hasActiveAlarm, snooze, dismiss } = useAlarm();
+const { activeAlarm, hasActiveAlarm, snooze, dismiss } = useAlarm()
 
 const formattedTime = computed(() => {
-  if (!activeAlarm.value) return '';
-  const date = new Date(activeAlarm.value.triggerTime);
+  if (!activeAlarm.value) return ''
+  const date = new Date(activeAlarm.value.triggerTime)
   return date.toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit'
-  });
-});
+  })
+})
 
 async function handleSnooze(): Promise<void> {
   if (activeAlarm.value) {
-    await snooze(activeAlarm.value.id);
+    await snooze(activeAlarm.value.id)
   }
 }
 
 async function handleDismiss(): Promise<void> {
   if (activeAlarm.value) {
-    await dismiss(activeAlarm.value.id);
+    await dismiss(activeAlarm.value.id)
   }
 }
 </script>
@@ -79,14 +75,23 @@ async function handleDismiss(): Promise<void> {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light), var(--color-primary));
+  background: linear-gradient(
+    90deg,
+    var(--color-primary),
+    var(--color-primary-light),
+    var(--color-primary)
+  );
   background-size: 200% 100%;
   animation: shimmer 2s ease-in-out infinite;
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .alarm-header {
@@ -142,12 +147,25 @@ async function handleDismiss(): Promise<void> {
 }
 
 @keyframes ring-sway {
-  0%, 100% { transform: rotate(0deg); }
-  15% { transform: rotate(20deg); }
-  30% { transform: rotate(-16deg); }
-  45% { transform: rotate(12deg); }
-  60% { transform: rotate(-8deg); }
-  75% { transform: rotate(4deg); }
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(20deg);
+  }
+  30% {
+    transform: rotate(-16deg);
+  }
+  45% {
+    transform: rotate(12deg);
+  }
+  60% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
 }
 
 .alarm-header-text {
@@ -280,7 +298,11 @@ async function handleDismiss(): Promise<void> {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>
