@@ -1,47 +1,41 @@
 name: Valendar Electron Windows Release
-# 仅推送 v 开头标签时触发打包发布（例如 v1.0.0）
 on:
   push:
     tags:
       - 'v*'
 
-# 必须开启仓库写入权限，否则无法创建 Release
 permissions:
   contents: write
 
 jobs:
   build-win:
     runs-on: windows-latest
-    # 指定工作目录为项目子文件夹 valendar
     defaults:
       run:
         working-directory: valendar
 
     steps:
-      # 拉取完整代码（包含标签信息）
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 配置 Node20
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          # 关键修复：指定子目录下的lock文件路径
+          cache-dependency-path: valendar/package-lock.json
 
-      # 安装全部依赖
       - name: Install dependencies
         run: npm ci
 
-      # 注入github令牌，打包时自动上传产物到Release
       - name: Build Windows Installer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build:win -- --publish always
 
-      # 兜底上传产物到Actions Artifacts（7天有效期备用）
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
