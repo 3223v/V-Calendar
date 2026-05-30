@@ -1,157 +1,132 @@
 <template>
-  <div class="modal-overlay" @click.self="handleClose">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 class="modal-title">{{ isEdit ? '编辑事件' : '新建事件' }}</h2>
-        <button class="close-btn" @click="handleClose">×</button>
+  <ModalBox :title="isEdit ? '编辑事件' : '新建事件'" @close="handleClose">
+    <form @submit.prevent="handleSubmit" class="event-form">
+      <div class="form-group">
+        <label>标题 *</label>
+        <input
+          ref="titleInputRef"
+          v-model="formData.title"
+          type="text"
+          class="input"
+          required
+          placeholder="输入事件标题"
+        />
       </div>
-      <form @submit.prevent="handleSubmit" class="event-form">
+
+      <div class="form-group">
+        <label>描述</label>
+        <textarea
+          v-model="formData.description"
+          class="input"
+          rows="3"
+          placeholder="输入事件描述"
+        ></textarea>
+      </div>
+
+      <div class="form-row">
         <div class="form-group">
-          <label>标题 *</label>
-          <input
-            v-model="formData.title"
-            type="text"
-            class="input"
-            required
-            placeholder="输入事件标题"
-          />
+          <label>开始日期 *</label>
+          <input v-model="formData.startDate" type="date" class="input" required />
         </div>
-
         <div class="form-group">
-          <label>描述</label>
-          <textarea
-            v-model="formData.description"
-            class="input"
-            rows="3"
-            placeholder="输入事件描述"
-          ></textarea>
+          <label>结束日期 *</label>
+          <input v-model="formData.endDate" type="date" class="input" required />
         </div>
+      </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>开始日期 *</label>
-            <input
-              v-model="formData.startDate"
-              type="date"
-              class="input"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>结束日期 *</label>
-            <input
-              v-model="formData.endDate"
-              type="date"
-              class="input"
-              required
-            />
-          </div>
-        </div>
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input v-model="formData.isAllDay" type="checkbox" />
+          <span>全天事件</span>
+        </label>
+      </div>
 
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input v-model="formData.isAllDay" type="checkbox" />
-            <span>全天事件</span>
-          </label>
-        </div>
-
-        <div v-if="!formData.isAllDay" class="form-row">
-          <div class="form-group">
-            <label>开始时间</label>
-            <input
-              v-model="formData.startTime"
-              type="time"
-              class="input"
-            />
-          </div>
-          <div class="form-group">
-            <label>结束时间</label>
-            <input
-              v-model="formData.endTime"
-              type="time"
-              class="input"
-            />
-          </div>
-        </div>
-
+      <div v-if="!formData.isAllDay" class="form-row">
         <div class="form-group">
-          <label>分类</label>
-          <select v-model="formData.category" class="input">
-            <option value="work">工作</option>
-            <option value="personal">个人</option>
-            <option value="important">重要</option>
-            <option value="holiday">节假日</option>
-            <option value="custom">自定义</option>
-          </select>
+          <label>开始时间</label>
+          <input v-model="formData.startTime" type="time" class="input" />
         </div>
-
         <div class="form-group">
-          <label>地点</label>
-          <input
-            v-model="formData.location"
-            type="text"
-            class="input"
-            placeholder="输入地点"
-          />
+          <label>结束时间</label>
+          <input v-model="formData.endTime" type="time" class="input" />
         </div>
+      </div>
 
-        <div class="form-group">
-          <label class="checkbox-label">
-            <input v-model="alarmEnabled" type="checkbox" />
-            <span>设置提醒</span>
-          </label>
-        </div>
+      <div class="form-group">
+        <label>分类</label>
+        <select v-model="formData.category" class="input">
+          <option value="work">工作</option>
+          <option value="personal">个人</option>
+          <option value="important">重要</option>
+          <option value="holiday">节假日</option>
+          <option value="custom">自定义</option>
+        </select>
+      </div>
 
-        <div v-if="alarmEnabled" class="form-group">
-          <label>提前提醒</label>
-          <select v-model="formData.alarmBefore" class="input">
-            <option :value="5">5 分钟</option>
-            <option :value="10">10 分钟</option>
-            <option :value="15">15 分钟</option>
-            <option :value="30">30 分钟</option>
-            <option :value="60">1 小时</option>
-            <option :value="120">2 小时</option>
-            <option :value="1440">1 天</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label>地点</label>
+        <input v-model="formData.location" type="text" class="input" placeholder="输入地点" />
+      </div>
 
-        <div v-if="submitError" class="form-error">{{ submitError }}</div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input v-model="alarmEnabled" type="checkbox" />
+          <span>设置提醒</span>
+        </label>
+      </div>
 
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="handleClose">
-            取消
-          </button>
-          <button type="submit" class="btn btn-primary" :disabled="submitting">
-            {{ submitting ? '创建中...' : (isEdit ? '保存' : '创建') }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
+      <div v-if="alarmEnabled" class="form-group">
+        <label>提前提醒</label>
+        <select v-model="formData.alarmBefore" class="input">
+          <option :value="5">5 分钟</option>
+          <option :value="10">10 分钟</option>
+          <option :value="15">15 分钟</option>
+          <option :value="30">30 分钟</option>
+          <option :value="60">1 小时</option>
+          <option :value="120">2 小时</option>
+          <option :value="1440">1 天</option>
+        </select>
+      </div>
+
+      <div v-if="submitError" class="form-error">{{ submitError }}</div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" @click="handleClose">取消</button>
+        <button type="submit" class="btn btn-primary" :disabled="submitting">
+          {{ submitting ? '保存中...' : isEdit ? '保存' : '创建' }}
+        </button>
+      </div>
+    </form>
+  </ModalBox>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import dayjs from 'dayjs';
-import type { CalendarEvent, EventInput, EventCategory } from '../../types';
-import { useEventStore } from '../../stores/event.store';
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import dayjs from 'dayjs'
+import type { CalendarEvent, EventInput, EventCategory } from '../../types'
+import { useEventStore } from '../../stores/event.store'
+import { createLogger } from '../../utils/logger'
+import ModalBox from '../common/ModalBox.vue'
+
+const log = createLogger('EventForm')
 
 const props = defineProps<{
-  event?: CalendarEvent | null;
-  defaultDate?: string;
-  defaultStartTime?: string;
-  defaultEndTime?: string;
-}>();
+  event?: CalendarEvent | null
+  defaultDate?: string
+  defaultStartTime?: string
+  defaultEndTime?: string
+}>()
 
 const emit = defineEmits<{
-  (e: 'submit', event: EventInput): void;
-  (e: 'close'): void;
-}>();
+  (e: 'submit', event: EventInput): void
+  (e: 'close'): void
+}>()
 
-const eventStore = useEventStore();
-const isEdit = computed(() => !!props.event);
-const submitError = ref('');
-const submitting = ref(false);
+const eventStore = useEventStore()
+const isEdit = computed(() => !!props.event)
+const submitError = ref('')
+const submitting = ref(false)
+const titleInputRef = ref<HTMLInputElement | null>(null)
 
 const formData = ref({
   title: '',
@@ -160,13 +135,13 @@ const formData = ref({
   endDate: props.defaultDate || dayjs().format('YYYY-MM-DD'),
   startTime: props.defaultStartTime || '',
   endTime: props.defaultEndTime || '',
-  isAllDay: !(props.defaultStartTime),
+  isAllDay: !props.defaultStartTime,
   category: 'personal' as EventCategory,
   location: '',
   alarmBefore: 15
-});
+})
 
-const alarmEnabled = ref(false);
+const alarmEnabled = ref(false)
 
 onMounted(() => {
   if (props.event) {
@@ -181,26 +156,36 @@ onMounted(() => {
       category: props.event.category,
       location: props.event.location || '',
       alarmBefore: props.event.alarm?.before || 15
-    };
-    alarmEnabled.value = props.event.alarm?.isEnabled || false;
+    }
+    alarmEnabled.value = props.event.alarm?.isEnabled || false
   }
-});
+  focusTitleInput()
+})
+
+async function focusTitleInput(): Promise<void> {
+  await nextTick()
+  if (titleInputRef.value) {
+    titleInputRef.value.focus()
+    log.debug('Title input focused')
+  }
+}
 
 function handleSubmit(): void {
-  console.log('[EventForm] handleSubmit called');
-  submitError.value = '';
+  log.info('handleSubmit called')
+  submitError.value = ''
 
   if (!formData.value.title.trim()) {
-    submitError.value = '请输入事件标题';
-    return;
+    submitError.value = '请输入事件标题'
+    focusTitleInput()
+    return
   }
 
   if (!formData.value.startDate || !formData.value.endDate) {
-    submitError.value = '请选择开始和结束日期';
-    return;
+    submitError.value = '请选择开始和结束日期'
+    return
   }
 
-  submitting.value = true;
+  submitting.value = true
 
   const eventInput: EventInput = {
     title: formData.value.title.trim(),
@@ -212,71 +197,45 @@ function handleSubmit(): void {
     isAllDay: formData.value.isAllDay,
     category: formData.value.category,
     location: formData.value.location || undefined,
-    alarm: alarmEnabled.value ? {
-      id: props.event?.alarm?.id || '',
-      before: formData.value.alarmBefore,
-      isEnabled: true
-    } : undefined
-  };
+    alarm: alarmEnabled.value
+      ? {
+          id: props.event?.alarm?.id || '',
+          before: formData.value.alarmBefore,
+          isEnabled: true
+        }
+      : undefined
+  }
 
-  console.log('[EventForm] emitting submit:', eventInput.title);
-  emit('submit', eventInput);
+  log.info('Emitting submit:', eventInput.title)
+  emit('submit', eventInput)
 }
 
-watch(() => eventStore.error, (newError) => {
-  if (newError) {
-    console.error('[EventForm] store error:', newError);
-    submitError.value = newError;
-    submitting.value = false;
+watch(
+  () => eventStore.error,
+  (newError) => {
+    if (newError) {
+      log.error('Store error:', newError)
+      submitError.value = newError
+      submitting.value = false
+    }
   }
-});
+)
 
-watch(() => eventStore.loading, (isLoading) => {
-  if (!isLoading) {
-    submitting.value = false;
+watch(
+  () => eventStore.loading,
+  (isLoading) => {
+    if (!isLoading) {
+      submitting.value = false
+    }
   }
-});
+)
 
 function handleClose(): void {
-  emit('close');
+  emit('close')
 }
 </script>
 
 <style scoped>
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-lg);
-  padding-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.modal-title {
-  font-size: var(--text-2xl);
-  font-weight: var(--font-semibold);
-  color: var(--color-text);
-  letter-spacing: -0.02em;
-}
-
-.close-btn {
-  width: 36px;
-  height: 36px;
-  font-size: 20px;
-  color: var(--color-text-secondary);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-btn:hover {
-  background-color: var(--color-surface-hover);
-  color: var(--color-text);
-  transform: rotate(90deg);
-}
-
 .event-form {
   display: flex;
   flex-direction: column;
@@ -322,7 +281,7 @@ function handleClose(): void {
   background-color: var(--color-primary-focus);
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
   width: 18px;
   height: 18px;
   cursor: pointer;
@@ -401,7 +360,9 @@ textarea.input {
 
 .form-group .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-focus), var(--shadow-sm);
+  box-shadow:
+    0 0 0 3px var(--color-primary-focus),
+    var(--shadow-sm);
   transform: translateY(-1px);
 }
 

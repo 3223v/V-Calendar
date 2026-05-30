@@ -1,39 +1,39 @@
 :root {
   /* 主色调 - 灰白色系 */
-  --color-primary: #2C3E50;
-  --color-primary-light: #34495E;
-  --color-primary-hover: #1A252F;
+  --color-primary: #2c3e50;
+  --color-primary-light: #34495e;
+  --color-primary-hover: #1a252f;
   --color-primary-focus: rgba(44, 62, 80, 0.15);
 
   /* 事件分类颜色 - 低饱和度 */
-  --color-event-work: #5D6D7E;
-  --color-event-personal: #7F8C8D;
-  --color-event-holiday: #BDC3C7;
-  --color-event-important: #95A5A6;
+  --color-event-work: #5d6d7e;
+  --color-event-personal: #7f8c8d;
+  --color-event-holiday: #bdc3c7;
+  --color-event-important: #95a5a6;
 
   /* 节假日高亮 */
-  --color-holiday: #2C3E50;
-  --color-weekend: #7F8C8D;
+  --color-holiday: #2c3e50;
+  --color-weekend: #7f8c8d;
 
   /* 农历颜色 */
-  --color-lunar: #8E8E93;
+  --color-lunar: #8e8e93;
 
   /* 背景色 - 灰白色系 */
-  --color-background: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F5F5F5;
-  --color-surface-active: #EBEBEB;
-  --color-border: #E8E8E8;
-  --color-border-light: #F0F0F0;
-  --color-text: #2C3E50;
-  --color-text-secondary: #7F8C8D;
-  --color-text-light: #95A5A6;
-  --color-text-inverse: #FFFFFF;
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f5f5f5;
+  --color-surface-active: #ebebeb;
+  --color-border: #e8e8e8;
+  --color-border-light: #f0f0f0;
+  --color-text: #2c3e50;
+  --color-text-secondary: #7f8c8d;
+  --color-text-light: #95a5a6;
+  --color-text-inverse: #ffffff;
 
   /* 状态颜色 */
-  --color-success: #7F8C8D;
-  --color-warning: #95A5A6;
-  --color-error: #8E8E93;
+  --color-success: #7f8c8d;
+  --color-warning: #95a5a6;
+  --color-error: #8e8e93;
 
   /* 阴影效果 - 更有层次感 */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -45,7 +45,9 @@
   --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 
   /* 字体 */
-  --font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
 
   /* 间距系统 */
@@ -119,15 +121,15 @@
   --blur-xl: 24px;
 }
 
-[data-theme="dark"] {
+[data-theme='dark'] {
   --color-background: #141414;
-  --color-surface: #1F1F1F;
-  --color-surface-hover: #2A2A2A;
+  --color-surface: #1f1f1f;
+  --color-surface-hover: #2a2a2a;
   --color-surface-active: #333333;
-  --color-border: #2E2E2E;
+  --color-border: #2e2e2e;
   --color-border-light: #252525;
-  --color-text: #E5E5E5;
-  --color-text-secondary: #A0A0A0;
+  --color-text: #e5e5e5;
+  --color-text-secondary: #a0a0a0;
   --color-text-light: #666666;
   --color-text-inverse: #141414;
   --color-primary-focus: rgba(44, 62, 80, 0.3);

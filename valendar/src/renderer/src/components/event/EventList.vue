@@ -2,9 +2,7 @@
   <div class="event-list">
     <div class="list-header">
       <h3 class="list-title">事件列表</h3>
-      <button class="btn btn-primary" @click="handleCreate">
-        + 新建事件
-      </button>
+      <button class="btn btn-primary" @click="handleCreate">+ 新建事件</button>
     </div>
     <div v-if="events.length === 0" class="empty-state">
       <div class="empty-icon">📅</div>
@@ -24,39 +22,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import dayjs from 'dayjs';
-import EventCard from './EventCard.vue';
-import type { CalendarEvent } from '../../types';
+import { computed } from 'vue'
+import dayjs from 'dayjs'
+import EventCard from './EventCard.vue'
+import type { CalendarEvent } from '../../types'
 
 const props = defineProps<{
-  events: CalendarEvent[];
-}>();
+  events: CalendarEvent[]
+}>()
 
 const emit = defineEmits<{
-  (e: 'create'): void;
-  (e: 'edit', event: CalendarEvent): void;
-  (e: 'delete', event: CalendarEvent): void;
-}>();
+  (e: 'create'): void
+  (e: 'edit', event: CalendarEvent): void
+  (e: 'delete', event: CalendarEvent): void
+}>()
 
 const sortedEvents = computed(() => {
   return [...props.events].sort((a, b) => {
-    const dateA = dayjs(a.startDate);
-    const dateB = dayjs(b.startDate);
-    return dateB.valueOf() - dateA.valueOf();
-  });
-});
+    const dateA = dayjs(a.startDate)
+    const dateB = dayjs(b.startDate)
+    return dateB.valueOf() - dateA.valueOf()
+  })
+})
 
 function handleCreate(): void {
-  emit('create');
+  emit('create')
 }
 
 function handleEdit(event: CalendarEvent): void {
-  emit('edit', event);
+  emit('edit', event)
 }
 
 function handleDelete(event: CalendarEvent): void {
-  emit('delete', event);
+  emit('delete', event)
 }
 </script>
 
@@ -110,11 +108,7 @@ function handleDelete(event: CalendarEvent): void {
   padding: var(--spacing-10);
   margin: var(--spacing-5);
   border-radius: var(--radius-xl);
-  background: linear-gradient(
-    135deg,
-    var(--color-surface) 0%,
-    var(--color-surface-hover) 100%
-  );
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-surface-hover) 100%);
   border: 1px dashed var(--color-border);
   animation: fadeIn var(--transition-slow) ease-out;
 }

@@ -3,7 +3,9 @@
     <div class="day-header">
       <div class="date-info">
         <div class="date-row">
-          <span class="day-name">{{ selectedDateInfo.dayNameCN }} {{ selectedDateInfo.dayNameEN }}</span>
+          <span class="day-name"
+            >{{ selectedDateInfo.dayNameCN }} {{ selectedDateInfo.dayNameEN }}</span
+          >
           <span class="date-divider">·</span>
           <span class="solar-date">{{ selectedDateInfo.solarDate }}</span>
           <span class="date-divider">·</span>
@@ -18,9 +20,15 @@
         </div>
       </div>
       <div class="events-column">
-        <div v-for="hour in 24" :key="hour" class="hour-slot" :class="{ 'selected-slot': isTimeSlotSelected(hour - 1) }" @click="handleTimeSlotClick(hour - 1)">
+        <div
+          v-for="hour in 24"
+          :key="hour"
+          class="hour-slot"
+          :class="{ 'selected-slot': isTimeSlotSelected(hour - 1) }"
+          @click="handleTimeSlotClick(hour - 1)"
+        >
           <div
-            v-for="event in getEventsForHour(hour - 1)"
+            v-for="event in getEventForHour(selectedDateInfo.events, hour - 1)"
             :key="event.id"
             class="event-block"
             :style="{
@@ -47,93 +55,59 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useCalendar } from '../../composables/useCalendar';
-import type { CalendarEvent, EventCategory } from '../../types';
+import { computed } from 'vue'
+import { useCalendar } from '../../composables/useCalendar'
+import {
+  getEventColor,
+  formatHour,
+  getEventTop,
+  getEventHeight,
+  getEventForHour
+} from '../../utils/event-display'
+import type { CalendarEvent } from '../../types'
 
 const emit = defineEmits<{
-  (e: 'event-click', event: CalendarEvent): void;
-}>();
+  (e: 'event-click', event: CalendarEvent): void
+}>()
 
-const { selectedDate, getDateInfo, selectTimeSlot, selectedTimeSlot } = useCalendar();
+const { selectedDate, getDateInfo, selectTimeSlot, selectedTimeSlot } = useCalendar()
 
 const selectedDateInfo = computed(() => {
-  const info = getDateInfo(selectedDate.value);
-  const dayOfWeek = selectedDate.value.day();
-  
-  // 中文星期
-  const dayNamesCN = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-  // 英文星期
-  const dayNamesEN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  
+  const info = getDateInfo(selectedDate.value)
+  const dayOfWeek = selectedDate.value.day()
+
+  const dayNamesCN = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  const dayNamesEN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
   return {
     ...info,
     dayNameCN: dayNamesCN[dayOfWeek],
     dayNameEN: dayNamesEN[dayOfWeek],
     solarDate: selectedDate.value.format('YYYY年M月D日'),
     lunarDateStr: info.lunarDateString || ''
-  };
-});
-
-function formatHour(hour: number): string {
-  return `${hour.toString().padStart(2, '0')}:00`;
-}
-
-function getEventsForHour(hour: number): CalendarEvent[] {
-  return selectedDateInfo.value.events.filter(e => {
-    if (!e.startTime) return false;
-    const eventHour = parseInt(e.startTime.split(':')[0], 10);
-    return eventHour === hour;
-  });
-}
-
-function getEventTop(event: CalendarEvent): string {
-  if (!event.startTime) return '0px';
-  const [hours, minutes] = event.startTime.split(':').map(Number);
-  return `${(hours * 60 + minutes) / 60 * 60}px`;
-}
-
-function getEventHeight(event: CalendarEvent): string {
-  if (!event.startTime || !event.endTime) return '60px';
-  const [startHours, startMinutes] = event.startTime.split(':').map(Number);
-  const [endHours, endMinutes] = event.endTime.split(':').map(Number);
-  const startMinutesTotal = startHours * 60 + startMinutes;
-  const endMinutesTotal = endHours * 60 + endMinutes;
-  const duration = Math.max(endMinutesTotal - startMinutesTotal, 30);
-  return `${(duration / 60) * 60}px`;
-}
-
-function getEventColor(category: EventCategory): string {
-  const colors: Record<EventCategory, string> = {
-    work: 'var(--color-event-work)',
-    personal: 'var(--color-event-personal)',
-    holiday: 'var(--color-event-holiday)',
-    important: 'var(--color-event-important)',
-    custom: 'var(--color-primary)'
-  };
-  return colors[category] || colors.personal;
-}
+  }
+})
 
 function handleEventClick(event: CalendarEvent): void {
-  emit('event-click', event);
+  emit('event-click', event)
 }
 
 function isTimeSlotSelected(hour: number): boolean {
-  if (!selectedTimeSlot.value) return false;
-  const dateStr = selectedDate.value.format('YYYY-MM-DD');
-  if (selectedTimeSlot.value.date !== dateStr) return false;
-  if (!selectedTimeSlot.value.startTime) return true;
-  const slotHour = parseInt(selectedTimeSlot.value.startTime.split(':')[0], 10);
-  return slotHour === hour;
+  if (!selectedTimeSlot.value) return false
+  const dateStr = selectedDate.value.format('YYYY-MM-DD')
+  if (selectedTimeSlot.value.date !== dateStr) return false
+  if (!selectedTimeSlot.value.startTime) return true
+  const slotHour = parseInt(selectedTimeSlot.value.startTime.split(':')[0], 10)
+  return slotHour === hour
 }
 
 function handleTimeSlotClick(hour: number): void {
-  const dateStr = selectedDate.value.format('YYYY-MM-DD');
+  const dateStr = selectedDate.value.format('YYYY-MM-DD')
   selectTimeSlot({
     date: dateStr,
     startTime: `${hour.toString().padStart(2, '0')}:00`,
     endTime: `${(hour + 1).toString().padStart(2, '0')}:00`
-  });
+  })
 }
 </script>
 
@@ -277,16 +251,16 @@ function handleTimeSlotClick(hour: number): void {
   .day-header {
     padding: var(--spacing-4);
   }
-  
+
   .date-row {
     font-size: var(--text-lg);
     gap: var(--spacing-2);
   }
-  
+
   .time-column {
     width: 60px;
   }
-  
+
   .time-slot {
     font-size: 10px;
   }
@@ -296,14 +270,14 @@ function handleTimeSlotClick(hour: number): void {
   .day-header {
     padding: var(--spacing-3);
   }
-  
+
   .date-row {
     font-size: var(--text-md);
     gap: var(--spacing-1\.5);
     flex-wrap: wrap;
     justify-content: center;
   }
-  
+
   .time-column {
     width: 50px;
   }
