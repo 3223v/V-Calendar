@@ -2,23 +2,30 @@ name: 自动打包Electron安装包
 on:
   push:
     branches:
-      - release-pack  # 只有这个分支推送才打包
+      - release-pack
 
 jobs:
   build:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: valendar  # 关键：指定项目在子文件夹里
     steps:
       - uses: actions/checkout@v4
-      - name: 安装Node
+
+      - name: 设置 Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: 安装依赖
         run: npm ci
-      - name: 打包exe
+
+      - name: 打包 exe 安装包
         run: npm run dist
-      - name: 上传安装包
+
+      - name: 上传打包产物
         uses: actions/upload-artifact@v4
         with:
           name: windows-setup
-          path: dist/*.exe
+          path: valendar/dist/*.exe  # 打包输出也在子目录
