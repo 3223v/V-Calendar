@@ -1,4 +1,4 @@
-import type { NLUEngine, NLUResult } from './nlu.interface'
+import type { NLUEngine, NLUResult, NLUContext } from './nlu.interface'
 import { langGraphNLU } from './langgraph-nlu'
 import { createLogger } from '../../utils/logger'
 
@@ -14,7 +14,7 @@ const log = createLogger('NLUManager')
  *    - readonly name: string
  *    - configure(...): void
  *    - isAvailable(): boolean
- *    - parse(text, source): Promise<NLUResult>
+ *    - parse(text, source, context?): Promise<NLUResult>
  * 3. Import and register it in this file:
  *    nluManager.register(myEngine)
  * 4. (Optional) Add a selector in SettingsPage to let users pick the engine.
@@ -26,18 +26,15 @@ class NLUManager implements NLUEngine {
   private activeEngine: NLUEngine | null = null
 
   constructor() {
-    // Register built-in engines
     this.register(langGraphNLU)
     this.setActive(langGraphNLU.name)
   }
 
-  /** Register an NLU engine */
   register(engine: NLUEngine): void {
     this.engines.set(engine.name, engine)
     log.info('Registered engine:', engine.name)
   }
 
-  /** Set the active engine by name */
   setActive(name: string): boolean {
     const engine = this.engines.get(name)
     if (!engine) {
@@ -49,17 +46,14 @@ class NLUManager implements NLUEngine {
     return true
   }
 
-  /** Get all registered engine names */
   getEngineNames(): string[] {
     return Array.from(this.engines.keys())
   }
 
-  /** Get the active engine instance (for direct configuration) */
   getActiveEngine(): NLUEngine | null {
     return this.activeEngine
   }
 
-  /** Configure the active engine's LLM connection */
   configure(baseUrl: string, apiKey: string, model: string): void {
     if (!this.activeEngine) {
       log.warn('No active engine to configure')
@@ -68,10 +62,17 @@ class NLUManager implements NLUEngine {
 
     log.info('configure() called:', { baseUrl, apiKey: apiKey ? '***set***' : '(empty)', model })
 
-    // Engines that support LLM configuration implement configure()
-    if ('configure' in this.activeEngine && typeof (this.activeEngine as any).configure === 'function') {
-      (this.activeEngine as any).configure(baseUrl, apiKey, model)
-      log.info('Engine configured:', this.activeEngine.name, '| available:', this.activeEngine.isAvailable())
+    if (
+      'configure' in this.activeEngine &&
+      typeof (this.activeEngine as any).configure === 'function'
+    ) {
+      ;(this.activeEngine as any).configure(baseUrl, apiKey, model)
+      log.info(
+        'Engine configured:',
+        this.activeEngine.name,
+        '| available:',
+        this.activeEngine.isAvailable()
+      )
     }
   }
 
@@ -79,11 +80,11 @@ class NLUManager implements NLUEngine {
     return this.activeEngine?.isAvailable() ?? false
   }
 
-  async parse(text: string, source: 'nlu'): Promise<NLUResult> {
+  async parse(text: string, source: 'nlu', context?: NLUContext): Promise<NLUResult> {
     if (!this.activeEngine) {
       throw new Error('No NLU engine available')
     }
-    return this.activeEngine.parse(text, source)
+    return this.activeEngine.parse(text, source, context)
   }
 }
 

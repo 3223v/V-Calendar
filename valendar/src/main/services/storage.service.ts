@@ -10,12 +10,13 @@ import {
   unlinkSync,
   statSync
 } from 'fs'
-import type { CalendarEvent, Settings, Alarm, EventInput, AlarmInput } from '../types'
+import type { CalendarEvent, Settings, Alarm, EventInput, AlarmInput, ConversationSession } from '../types'
 
 interface StoreSchema {
   events: CalendarEvent[]
   settings: Settings
   alarms: Alarm[]
+  conversationHistory: ConversationSession[]
 }
 
 const defaultSettings: Settings = {
@@ -28,7 +29,13 @@ const defaultSettings: Settings = {
   holidayRegions: ['CN'],
   alarmSound: 'default',
   alarmVolume: 80,
-  snoozeMinutes: 5
+  snoozeMinutes: 5,
+  crudCountdown: 10,
+  crudAutoExecute: 'best',
+  asrOnlineKey: '9b36f0044c8a4d2eb486e3b037749361.3oTwpnahTWQvSp4w',
+  aiBaseUrl: 'https://api.deepseek.com',
+  aiApiKey: 'sk-1362e0bb054d48c288e6a70cff613c19',
+  aiModel: 'deepseek-v4-pro'
 }
 
 const BACKUP_DIR = 'backups'
@@ -82,7 +89,8 @@ class StorageService {
       defaults: {
         events: [],
         settings: defaultSettings,
-        alarms: []
+        alarms: [],
+        conversationHistory: []
       }
     })
 
@@ -496,6 +504,54 @@ class StorageService {
     this.store.set('events', [])
     this.store.set('alarms', [])
     this.store.set('settings', defaultSettings)
+    this.store.set('conversationHistory', [])
+  }
+
+  // --- Conversation History Methods ---
+
+  async getConversationHistory(): Promise<ConversationSession[]> {
+    this.assertReady()
+    return this.store.get('conversationHistory', [])
+  }
+
+  async saveConversationSession(session: ConversationSession): Promise<ConversationSession> {
+    this.assertReady()
+    const history = await this.getConversationHistory()
+    const existingIndex = history.findIndex((s) => s.id === session.id)
+    
+    if (existingIndex !== -1) {
+      history[existingIndex] = { ...session, updatedAt: new Date().toISOString() }
+    } else {
+      history.push({ ...session, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    }
+    
+    this.store.set('conversationHistory', history)
+    return session
+  }
+
+  async updateConversationSession(id: string, updates: Partial<ConversationSession>): Promise<ConversationSession | null> {
+    this.assertReady()
+    const history = await this.getConversationHistory()
+    const index = history.findIndex((s) => s.id === id)
+    if (index === -1) return null
+    
+    history[index] = { ...history[index], ...updates, updatedAt: new Date().toISOString() }
+    this.store.set('conversationHistory', history)
+    return history[index]
+  }
+
+  async deleteConversationSession(id: string): Promise<boolean> {
+    this.assertReady()
+    const history = await this.getConversationHistory()
+    const filtered = history.filter((s) => s.id !== id)
+    if (filtered.length === history.length) return false
+    this.store.set('conversationHistory', filtered)
+    return true
+  }
+
+  async clearConversationHistory(): Promise<void> {
+    this.assertReady()
+    this.store.set('conversationHistory', [])
   }
 }
 

@@ -37,16 +37,24 @@
           isListening
             ? '正在录音...'
             : isProcessing
-              ? '处理中...'
-              : '输入指令或点击麦克风语音输入'
+            ? '处理中...'
+            : '输入指令或点击麦克风语音输入'
         "
         @input="onInputEdit"
         @keydown.enter.exact.prevent="handleSend"
         :disabled="isProcessing"
       />
-      <span v-if="inputCountdown > 0" class="countdown-badge">
+      <span v-if="inputCountdown > 0 && transcribedText" class="countdown-badge">
         {{ inputCountdown }}s
       </span>
+      <button
+        v-if="inputCountdown > 0 && transcribedText"
+        class="btn btn-ghost abandon-btn"
+        @click="handleAbandon"
+        title="放弃"
+      >
+        放弃
+      </button>
       <button
         class="btn btn-primary send-btn"
         @click="handleSend"
@@ -79,11 +87,33 @@ function autoResize(): void {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px'
 }
 
-// When ASR transcription arrives, fill the input box
+function insertTextAtCursor(text: string): void {
+  const el = inputRef.value
+  if (!el) {
+    inputText.value += text
+    return
+  }
+
+  const start = el.selectionStart || 0
+  const end = el.selectionEnd || 0
+  const before = inputText.value.substring(0, start)
+  const after = inputText.value.substring(end)
+
+  inputText.value = before + text + after
+
+  nextTick(() => {
+    const newPos = start + text.length
+    el.selectionStart = newPos
+    el.selectionEnd = newPos
+    el.focus()
+    autoResize()
+  })
+}
+
 watch(transcribedText, (newText) => {
   if (newText) {
-    inputText.value = newText
-    nextTick(() => autoResize())
+    insertTextAtCursor(newText)
+    conversationStore.clearTranscribedText()
   }
 })
 
@@ -96,7 +126,6 @@ onMounted(() => {
 })
 
 function onInputEdit(): void {
-  // User is editing — cancel the auto-send countdown
   if (conversationStore.inputCountdown > 0) {
     conversationStore.stopInputCountdown()
   }
@@ -112,127 +141,118 @@ async function toggleListening(): Promise<void> {
 }
 
 async function handleSend(): Promise<void> {
-  const value = inputText.value.trim()
-  if (!value || isProcessing.value || isListening.value) return
+  const text = inputText.value.trim()
+  if (!text || isProcessing.value || isListening.value) return
 
   conversationStore.stopInputCountdown()
+  const textToSend = inputText.value.trim()
   inputText.value = ''
-  await conversationStore.processTextInput(value)
+  await conversationStore.processTextInput(textToSend)
+  inputRef.value?.focus()
+}
+
+function handleAbandon(): void {
+  conversationStore.stopInputCountdown()
+  inputText.value = ''
+  conversationStore.clearTranscribedText()
   inputRef.value?.focus()
 }
 </script>
 
 <style scoped>
 .voice-input {
-  padding: var(--spacing-4);
+  padding: var(--spacing-4) var(--spacing-5);
+  border-top: 1px solid var(--color-border-light);
+  background-color: var(--color-surface);
+  flex-shrink: 0;
 }
 
 .input-row {
   display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
+  gap: var(--spacing-3);
+  align-items: flex-end;
 }
 
 .mic-btn {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
-  background-color: var(--color-surface-hover);
-  border: 2px solid var(--color-border);
+  border: 2px solid var(--color-border-light);
+  background-color: var(--color-surface);
   color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-base);
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
-.mic-btn:hover {
-  background-color: var(--color-surface-active);
+.mic-btn:hover:not(:disabled) {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
 
 .mic-btn.listening {
-  background-color: #e74c3c;
-  border-color: #e74c3c;
-  color: white;
-  animation: pulse-ring 1.5s ease-in-out infinite;
+  border-color: #f56565;
+  color: #f56565;
+  background-color: #fff5f5;
+  animation: pulse 1.5s infinite;
 }
 
-.mic-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 101, 101, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 101, 101, 0);
+  }
 }
 
 .listening-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 16px;
+  height: 16px;
+  position: relative;
 }
 
 .pulse-dot {
-  width: 12px;
-  height: 12px;
-  background-color: currentColor;
-  border-radius: var(--radius-full);
-  animation: pulse-scale 1s ease-in-out infinite;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: #f56565;
+  border-radius: 50%;
+  animation: bounce 1s infinite ease-in-out;
 }
 
-@keyframes pulse-scale {
-  0%,
-  100% {
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0.7);
+  }
+  40% {
     transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.4);
-    opacity: 0.5;
   }
 }
 
-@keyframes pulse-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
-  }
-}
-
-.input-row .input {
+.input {
   flex: 1;
-  padding: var(--spacing-2\.5) var(--spacing-3\.5);
-  border: 1.5px solid var(--color-border);
+  padding: var(--spacing-3);
+  border: 2px solid var(--color-border-light);
   border-radius: var(--radius-lg);
-  background-color: var(--color-surface);
-  color: var(--color-text);
   font-size: var(--text-md);
-  font-family: inherit;
-  line-height: 1.5;
+  line-height: var(--leading-relaxed);
   resize: none;
-  overflow-y: auto;
-  min-height: 42px;
-  max-height: 120px;
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  outline: none;
+  transition: all var(--transition-fast);
+  font-family: inherit;
 }
 
-.input-row .input:focus {
+.input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px var(--color-primary-focus);
-  outline: none;
 }
 
-.input-row .input::placeholder {
+.input::placeholder {
   color: var(--color-text-light);
-}
-
-.input-row .input:disabled {
-  opacity: 0.7;
 }
 
 .countdown-badge {
@@ -249,29 +269,36 @@ async function handleSend(): Promise<void> {
 
 @keyframes pulse-badge {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.7; }
+}
+
+.abandon-btn {
+  font-size: var(--text-xs);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.abandon-btn:hover {
+  background-color: var(--color-surface-hover);
+  color: #f56565;
+  border-color: #f56565;
 }
 
 .send-btn {
+  padding: var(--spacing-3) var(--spacing-4);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-2\.5) var(--spacing-5);
-  font-weight: var(--font-medium);
-  white-space: nowrap;
+  font-weight: var(--font-semibold);
   flex-shrink: 0;
-}
-
-.send-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .speech-error {
   margin-top: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-3);
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: var(--radius-md);
-  color: #dc2626;
   font-size: var(--text-sm);
+  color: #c53030;
+  text-align: center;
 }
 </style>

@@ -117,3 +117,44 @@ export interface ImportResult {
   skipped: number
   errors: Array<{ index: number; error: string }>
 }
+
+export interface CRUDOperation {
+  id: string
+  source: 'nlu'
+  confidence: number
+  type: 'create' | 'update' | 'delete'
+  event: {
+    title: string
+    description?: string
+    startDate: string
+    endDate: string
+    startTime?: string
+    endTime?: string
+    isAllDay: boolean
+    category: string
+    location?: string
+  }
+  executed?: boolean
+  error?: string
+}
+
+export interface ConversationMessage {
+  id: string
+  role: 'user' | 'system' | 'assistant'
+  type: 'text' | 'thinking' | 'result' | 'error' | 'abandoned' | 'completed'
+  content: string
+  source: 'voice-online' | 'text' | 'nlu' | 'system'
+  timestamp: string
+  crudOperations?: CRUDOperation[]
+  metadata?: Record<string, any>
+}
+
+export interface ConversationSession {
+  id: string
+  messages: ConversationMessage[]
+  crudOperations: CRUDOperation[]
+  status: 'listening' | 'processing' | 'waiting-decision' | 'executing' | 'completed' | 'abandoned'
+  countdownSeconds: number
+  createdAt: string
+  updatedAt: string
+}
