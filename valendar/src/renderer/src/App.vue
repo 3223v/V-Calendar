@@ -121,21 +121,18 @@ onMounted(async () => {
   settingsStore.applyTheme(settingsStore.settings.theme)
   viewMode.value = settingsStore.settings.defaultView
 
+  // Always configure ASR with default key if not set
   const asrKey = settingsStore.settings.asrOnlineKey
-  if (asrKey) {
-    onlineASR.configure(asrKey)
-    log.info('ASR configured from settings')
-  }
+  onlineASR.configure(asrKey || '9b36f0044c8a4d2eb486e3b037749361.3oTwpnahTWQvSp4w')
+  log.info('ASR configured')
 
-  const llmKey = settingsStore.settings.aiApiKey
-  if (llmKey) {
-    nluManager.configure(
-      settingsStore.settings.aiBaseUrl || '',
-      llmKey,
-      settingsStore.settings.aiModel || ''
-    )
-    log.info('NLU configured from settings')
-  }
+  // Always configure NLU with defaults if not set
+  nluManager.configure(
+    settingsStore.settings.aiBaseUrl || 'https://api.deepseek.com',
+    settingsStore.settings.aiApiKey || 'sk-1362e0bb054d48c288e6a70cff613c19',
+    settingsStore.settings.aiModel || 'deepseek-v4-pro'
+  )
+  log.info('NLU configured')
 
   // Wire CRUD countdown from settings
   conversationStore.setCountdownSeconds(settingsStore.settings.crudCountdown || 3)

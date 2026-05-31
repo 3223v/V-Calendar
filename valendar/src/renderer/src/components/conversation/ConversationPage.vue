@@ -1,31 +1,25 @@
 <template>
   <div class="conversation-page">
-    <aside class="crud-column">
-      <CRUDPanel />
-    </aside>
-
     <main class="conversation-column">
       <ConversationPanel />
     </main>
-
     <aside class="events-column">
       <div class="events-content">
         <EventList
-          :events="events"
-          @create="handleCreate"
-          @edit="handleEdit"
-          @delete="handleDelete"
-        />
+        :events="events"
+        @create="handleCreate"
+        @edit="handleEdit"
+        @delete="handleDelete"
+      />
       </div>
     </aside>
-
     <Transition name="fade">
       <EventForm
-        v-if="showEventForm"
-        :event="editingEvent"
-        :default-date="defaultDate"
-        @submit="handleFormSubmit"
-        @close="closeEventForm"
+      v-if="showEventForm"
+      :event="editingEvent"
+      :default-date="defaultDate"
+      @submit="handleFormSubmit"
+      @close="closeEventForm"
       />
     </Transition>
   </div>
@@ -39,7 +33,6 @@ import { createLogger } from '../../utils/logger'
 import EventList from '../event/EventList.vue'
 import EventForm from '../event/EventForm.vue'
 import ConversationPanel from './ConversationPanel.vue'
-import CRUDPanel from './CRUDPanel.vue'
 import type { CalendarEvent, EventInput } from '../../types'
 
 const log = createLogger('ConversationPage')
@@ -104,13 +97,7 @@ function closeEventForm(): void {
 }
 
 .conversation-column {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.crud-column {
-  flex: 1;
+  flex: 2;
   min-width: 0;
   overflow: hidden;
 }

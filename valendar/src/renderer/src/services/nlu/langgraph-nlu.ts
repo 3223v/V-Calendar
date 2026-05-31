@@ -1,12 +1,10 @@
-import type { NLUEngine, NLUResult } from './nlu.interface'
+import type { NLUEngine, NLUResult, NLUContext } from './nlu.interface'
 import type { CRUDOperation } from '../../types/conversation'
 import { Annotation, StateGraph, END } from '@langchain/langgraph'
 import { v4 as uuidv4 } from 'uuid'
 import { createLogger } from '../../utils/logger'
 
 const log = createLogger('LangGraphNLU')
-
-// ─── Workflow State ───────────────────────────────────────────────────
 
 const NLUState = Annotation.Root({
   text: Annotation<string>,
@@ -16,30 +14,43 @@ const NLUState = Annotation.Root({
   error: Annotation<string | null>,
   baseUrl: Annotation<string>,
   apiKey: Annotation<string>,
-  model: Annotation<string>
+  model: Annotation<string>,
+  context: Annotation<NLUContext | null>
 })
 
 type NLUStateType = typeof NLUState.State
 
-// ─── Prompts ─────────────────────────────────────────────────────────
-
-function buildSystemPrompt(): string {
-  const now = new Date()
+function buildSystemPrompt(context?: NLUContext | null): string {
+  const now = context?.currentTime ? new Date(context.currentTime) : new Date()
   const today = now.toISOString().slice(0, 10)
   const time = now.toTimeString().slice(0, 5)
   const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
-  return `你是日历助手，将用户的自然语言解析为日历操作。
+  let prompt = `你是日历助手，将用户的自然语言解析为日历操作。
 
 当前日期: ${today}
 当前时间: ${time}
 今天是星期${weekdays[now.getDay()]}
 
+## 核心规则
+【最重要】必须先判断能否匹配到有效事件，再决定是否生成操作！
+- 删除/取消操作：必须能匹配到现有事件才能生成delete操作
+- 修改操作：必须能匹配到现有事件才能生成update操作
+- 如果无法匹配到任何现有事件 → 返回空 operations
+- 绝对不能凭空捏造不存在的删除或修改操作！
+
 ## 操作类型
 - 创建/添加/安排/开会/约/提醒/计划 → "create"
 - 改/修改/变更/调整/推迟/提前 → "update"
 - 删除/取消/去掉/移除/不要了 → "delete"
-- 无法判断 → 返回空 operations
+- 无法判断或无匹配事件 → 返回空 operations
+
+## 匹配规则
+当用户说"取消XX"、"删除XX"、"改XX时间"等模糊指令时：
+1. 在下方【即将到来的日程】中查找是否存在匹配事件
+2. 匹配依据：标题相似度（关键词匹配）、时间接近度
+3. 能匹配到 → 生成对应操作
+4. 无法匹配 → 返回空 operations，并在思考中说明原因
 
 ## 时间
 - 相对: 明天=+1天, 后天=+2天, 下周X=下一个X, 下个月=+1月
@@ -54,15 +65,60 @@ function buildSystemPrompt(): string {
 - 其他→"personal"
 
 ## 置信度
-- 信息完整→0.9-1.0, 部分缺失→0.6-0.8, 猜测→0.3-0.5
+- 信息完整+能匹配到事件→0.9-1.0
+- 部分缺失+能匹配→0.6-0.8
+- 猜测（无匹配）→0.1-0.3`
 
-严格返回 JSON:
+  if (context?.recentMessages && context.recentMessages.length > 0) {
+    prompt += `\n\n## 最近对话历史（用于理解上下文）`
+    const recentMsgs = context.recentMessages.slice(-10)
+    recentMsgs.forEach((msg, i) => {
+      const role = msg.role === 'user' ? '用户' : '助手'
+      const contentPreview = msg.content.slice(0, 100)
+      prompt += `\n[${i + 1}] ${role}: ${contentPreview}`
+      if (msg.crudOperations && msg.crudOperations.length > 0) {
+        const ops = msg.crudOperations.map(op => `${op.type}(${op.event.title})`).join(', ')
+        prompt += ` [操作: ${ops}]`
+      }
+    })
+    prompt += `\n\n【重要】如果用户在取消/删除某个事件，需结合历史对话判断这个事件是否存在。`
+  }
+
+  if (context?.recentOperations && context.recentOperations.length > 0) {
+    prompt += `\n\n## 最近执行的操作`
+    context.recentOperations.slice(-5).forEach((op, i) => {
+      const status = op.executed ? '已执行' : '待执行'
+      prompt += `\n[${i + 1}] ${op.type}: "${op.event.title}" (${status})`
+      if (op.event.startDate) {
+        prompt += ` 日期: ${op.event.startDate}`
+        if (op.event.startTime) prompt += ` ${op.event.startTime}`
+      }
+    })
+  }
+
+  if (context?.upcomingEvents && context.upcomingEvents.length > 0) {
+    prompt += `\n\n## 即将到来的日程（必须严格参考）`
+    context.upcomingEvents.slice(0, 100).forEach((event, i) => {
+      prompt += `\n[${i + 1}] "${event.title}"`
+      prompt += ` 日期: ${event.startDate}`
+      if (event.startTime) {
+        prompt += ` ${event.startTime}`
+        if (event.endTime) prompt += `-${event.endTime}`
+      }
+      if (event.category) prompt += ` [${event.category}]`
+      if (event.location) prompt += ` 地点: ${event.location}`
+    })
+    prompt += `\n\n【关键】只有上述列表中的事件才能被删除或修改！如果用户提到的内容不在列表中，返回空 operations。`
+  } else {
+    prompt += `\n\n【关键】目前没有任何即将到来的日程！所有删除/修改操作都应返回空 operations。`
+  }
+
+  prompt += `\n\n严格返回 JSON（无匹配事件时operations数组为空）：
 {"operations":[{"type":"create|update|delete","confidence":0.0-1.0,"event":{"title":"必填","description":"可选","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","startTime":"HH:MM或null","endTime":"HH:MM或null","isAllDay":true/false,"category":"work|personal|holiday|important|custom","location":"可选或null"}}]}`
+
+  return prompt
 }
 
-// ─── Nodes ───────────────────────────────────────────────────────────
-
-/** 前置校验：过滤空输入 */
 async function preprocess(state: NLUStateType): Promise<Partial<NLUStateType>> {
   log.info('[Preprocess] input:', state.text)
   if (!state.text.trim()) {
@@ -71,7 +127,6 @@ async function preprocess(state: NLUStateType): Promise<Partial<NLUStateType>> {
   return { error: null }
 }
 
-/** 核心节点：调用 LLM 完成全量解析 */
 async function llmParse(state: NLUStateType): Promise<Partial<NLUStateType>> {
   if (state.error) return {}
 
@@ -88,7 +143,7 @@ async function llmParse(state: NLUStateType): Promise<Partial<NLUStateType>> {
       body: JSON.stringify({
         model: state.model,
         messages: [
-          { role: 'system', content: buildSystemPrompt() },
+          { role: 'system', content: buildSystemPrompt(state.context) },
           { role: 'user', content: state.text }
         ],
         response_format: { type: 'json_object' },
@@ -113,33 +168,44 @@ async function llmParse(state: NLUStateType): Promise<Partial<NLUStateType>> {
   }
 }
 
-/** 后置节点：解析 LLM JSON → CRUDOperation[] */
 async function assemble(state: NLUStateType): Promise<Partial<NLUStateType>> {
-  // 出错或无响应 → 本地兜底
   if (state.error || !state.llmResponse) {
     log.warn('[Assemble] using local fallback, error:', state.error)
     const today = new Date().toISOString().slice(0, 10)
     return {
-      operations: [{
-        id: uuidv4(),
-        source: state.source,
-        confidence: 0.5,
-        type: 'create',
-        event: {
-          title: state.text.trim(),
-          startDate: today,
-          endDate: today,
-          isAllDay: true,
-          category: 'personal'
+      operations: [
+        {
+          id: uuidv4(),
+          source: state.source,
+          confidence: 0.5,
+          type: 'create',
+          event: {
+            title: state.text.trim(),
+            startDate: today,
+            endDate: today,
+            isAllDay: true,
+            category: 'personal'
+          }
         }
-      }]
+      ]
     }
   }
 
   try {
     const parsed = JSON.parse(state.llmResponse)
-    const ops: CRUDOperation[] = (parsed.operations || [])
-      .filter((op: any) => op?.type && op?.event?.title && op?.event?.startDate)
+    const hasUpcomingEvents = state.context?.upcomingEvents && state.context.upcomingEvents.length > 0
+    
+    let ops: CRUDOperation[] = (parsed.operations || [])
+      .filter((op: any) => {
+        if (!op?.type || !op?.event?.title || !op?.event?.startDate) return false
+        
+        if ((op.type === 'delete' || op.type === 'update') && !hasUpcomingEvents) {
+          log.info('[Assemble] filtered out', op.type, 'operation: no upcoming events')
+          return false
+        }
+        
+        return true
+      })
       .map((op: any) => ({
         id: uuidv4(),
         source: state.source,
@@ -158,37 +224,39 @@ async function assemble(state: NLUStateType): Promise<Partial<NLUStateType>> {
         }
       }))
 
-    log.info('[Assemble] parsed', ops.length, 'operations')
+    if (!hasUpcomingEvents && ops.some(op => op.type === 'delete' || op.type === 'update')) {
+      log.info('[Assemble] no upcoming events, filtering all delete/update operations')
+      ops = []
+    }
+
+    log.info('[Assemble] parsed', ops.length, 'operations (hasEvents:', hasUpcomingEvents, ')')
     return { operations: ops }
   } catch (err) {
     log.error('[Assemble] JSON parse failed:', err)
-    // JSON 解析失败 → 兜底
     const today = new Date().toISOString().slice(0, 10)
     return {
-      operations: [{
-        id: uuidv4(),
-        source: state.source,
-        confidence: 0.5,
-        type: 'create',
-        event: {
-          title: state.text.trim(),
-          startDate: today,
-          endDate: today,
-          isAllDay: true,
-          category: 'personal'
+      operations: [
+        {
+          id: uuidv4(),
+          source: state.source,
+          confidence: 0.5,
+          type: 'create',
+          event: {
+            title: state.text.trim(),
+            startDate: today,
+            endDate: today,
+            isAllDay: true,
+            category: 'personal'
+          }
         }
-      }]
+      ]
     }
   }
 }
 
-// ─── Routing ─────────────────────────────────────────────────────────
-
 function routeAfterPreprocess(state: NLUStateType): string {
   return state.error ? 'assemble' : 'llm'
 }
-
-// ─── Build Workflow ──────────────────────────────────────────────────
 
 function buildWorkflow() {
   const graph = new StateGraph(NLUState)
@@ -206,28 +274,40 @@ function buildWorkflow() {
   return graph.compile()
 }
 
-// ─── Engine ──────────────────────────────────────────────────────────
+const DEFAULT_BASE_URL = 'https://api.deepseek.com'
+const DEFAULT_API_KEY = 'sk-1362e0bb054d48c288e6a70cff613c19'
+const DEFAULT_MODEL = 'deepseek-v4-pro'
 
 export class LangGraphNLU implements NLUEngine {
   readonly name = 'LangGraph NLU'
 
-  private baseUrl = ''
-  private apiKey = ''
-  private model = ''
+  private baseUrl = DEFAULT_BASE_URL
+  private apiKey = DEFAULT_API_KEY
+  private model = DEFAULT_MODEL
 
   configure(baseUrl: string, apiKey: string, model: string): void {
     this.baseUrl = baseUrl
     this.apiKey = apiKey
     this.model = model
-    log.info('Configured:', { baseUrl, apiKey: apiKey ? '***' : '(empty)', model, available: this.isAvailable() })
+    log.info('Configured:', {
+      baseUrl,
+      apiKey: apiKey ? '***' : '(empty)',
+      model,
+      available: this.isAvailable()
+    })
   }
 
   isAvailable(): boolean {
     return !!(this.baseUrl && this.apiKey && this.model)
   }
 
-  async parse(text: string, source: 'nlu'): Promise<NLUResult> {
+  async parse(text: string, source: 'nlu', context?: NLUContext): Promise<NLUResult> {
     log.info('parse() called | available:', this.isAvailable(), '| text:', text)
+    if (context) {
+      log.info('Context provided: messages=', context.recentMessages.length, 
+               'operations=', context.recentOperations.length,
+               'events=', context.upcomingEvents.length)
+    }
 
     if (!this.isAvailable()) {
       log.warn('NLU not configured, using local fallback')
@@ -244,7 +324,8 @@ export class LangGraphNLU implements NLUEngine {
         error: null,
         baseUrl: this.baseUrl,
         apiKey: this.apiKey,
-        model: this.model
+        model: this.model,
+        context: context || null
       })
 
       return { operations: result.operations, rawText: text, source }
@@ -258,19 +339,21 @@ export class LangGraphNLU implements NLUEngine {
   private parseLocal(text: string, source: 'nlu'): NLUResult {
     const today = new Date().toISOString().slice(0, 10)
     return {
-      operations: [{
-        id: uuidv4(),
-        source,
-        confidence: 0.5,
-        type: 'create',
-        event: {
-          title: text.trim(),
-          startDate: today,
-          endDate: today,
-          isAllDay: true,
-          category: 'personal'
+      operations: [
+        {
+          id: uuidv4(),
+          source,
+          confidence: 0.5,
+          type: 'create',
+          event: {
+            title: text.trim(),
+            startDate: today,
+            endDate: today,
+            isAllDay: true,
+            category: 'personal'
+          }
         }
-      }],
+      ],
       rawText: text,
       source
     }

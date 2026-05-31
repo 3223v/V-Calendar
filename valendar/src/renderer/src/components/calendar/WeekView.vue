@@ -2,36 +2,39 @@
   <div class="week-view">
     <div class="week-header">
       <div class="time-column-header"></div>
-      <div
-        v-for="dateInfo in weekDaysInfo"
-        :key="dateInfo.dateStr"
-        class="weekday-header"
-        :class="{
-          today: dateInfo.isToday,
-          selected: dateInfo.isSelected,
-          'is-holiday': dateInfo.isHoliday,
-          weekend: dateInfo.isWeekend
-        }"
-        @click="handleHeaderClick(dateInfo)"
-      >
-        <div class="weekday-name">{{ dateInfo.dayName }}</div>
-        <div class="weekday-date">
-          <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">{{
-            dateInfo.day
-          }}</span>
-          <span v-if="dateInfo.lunarDateString" class="lunar-date">
-            {{ dateInfo.lunarDateString }}
-          </span>
+      <div class="days-headers">
+        <div
+          v-for="dateInfo in weekDaysInfo"
+          :key="dateInfo.dateStr"
+          class="weekday-header"
+          :class="{
+            today: dateInfo.isToday,
+            selected: dateInfo.isSelected,
+            'is-holiday': dateInfo.isHoliday,
+            weekend: dateInfo.isWeekend
+          }"
+          @click="handleHeaderClick(dateInfo)"
+        >
+          <div class="weekday-name">{{ dateInfo.dayName }}</div>
+          <div class="weekday-date">
+            <span class="day-number" :class="{ 'day-today': dateInfo.isToday }">{{
+              dateInfo.day
+            }}</span>
+            <span v-if="dateInfo.lunarDateString" class="lunar-date">
+              {{ dateInfo.lunarDateString }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
-    <div class="week-content">
-      <div class="time-column">
+    <div class="week-content" ref="contentRef">
+      <div class="time-column" ref="timeColumnRef">
         <div v-for="hour in 24" :key="hour" class="time-slot">
           {{ formatHour(hour - 1) }}
         </div>
       </div>
-      <div class="days-columns">
+      <div class="days-columns" ref="daysColumnsRef">
+        <div class="grid-lines"></div>
         <div
           v-for="dateInfo in weekDaysInfo"
           :key="dateInfo.dateStr"
@@ -69,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import dayjs from 'dayjs'
 import { useCalendar } from '../../composables/useCalendar'
 import {
@@ -86,6 +89,39 @@ const emit = defineEmits<{
 }>()
 
 const { weekDays, getDateInfo, selectDate, selectTimeSlot, selectedTimeSlot } = useCalendar()
+
+const contentRef = ref<HTMLElement | null>(null)
+const timeColumnRef = ref<HTMLElement | null>(null)
+const daysColumnsRef = ref<HTMLElement | null>(null)
+
+function syncScroll(source: HTMLElement | null, targets: HTMLElement[]): void {
+  if (!source) return
+  targets.forEach((target) => {
+    if (target && target !== source) {
+      target.scrollTop = source.scrollTop
+    }
+  })
+}
+
+function handleScroll(e: Event): void {
+  const source = e.target as HTMLElement
+  const targets: HTMLElement[] = []
+  if (timeColumnRef.value && source !== timeColumnRef.value) targets.push(timeColumnRef.value)
+  if (daysColumnsRef.value && source !== daysColumnsRef.value) targets.push(daysColumnsRef.value)
+  syncScroll(source, targets)
+}
+
+onMounted(() => {
+  if (contentRef.value) {
+    contentRef.value.addEventListener('scroll', handleScroll)
+  }
+})
+
+onUnmounted(() => {
+  if (contentRef.value) {
+    contentRef.value.removeEventListener('scroll', handleScroll)
+  }
+})
 
 const weekDaysInfo = computed(() => {
   return weekDays.value.map((date) => {
@@ -148,6 +184,11 @@ function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
   width: 80px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border-light);
+}
+
+.days-headers {
+  display: flex;
+  flex: 1;
 }
 
 .weekday-header {
@@ -222,13 +263,22 @@ function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
 .week-content {
   display: flex;
   flex: 1;
-  overflow-y: auto;
+  position: relative;
+  overflow: hidden;
 }
 
 .time-column {
   width: 80px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border-light);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.time-column::-webkit-scrollbar {
+  display: none;
 }
 
 .time-slot {
@@ -246,6 +296,31 @@ function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
 .days-columns {
   display: flex;
   flex: 1;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.days-columns::-webkit-scrollbar {
+  display: none;
+}
+
+.grid-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-border-light) 0,
+    var(--color-border-light) calc(100% / 7),
+    transparent calc(100% / 7)
+  );
+  background-size: calc(100% / 7) 100%;
 }
 
 .day-column {

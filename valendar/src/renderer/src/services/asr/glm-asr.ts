@@ -5,6 +5,7 @@ const log = createLogger('GLM-ASR')
 
 const DEFAULT_ENDPOINT = 'https://open.bigmodel.cn/api/paas/v4/audio/transcriptions'
 const DEFAULT_MODEL = 'glm-asr-2512'
+const DEFAULT_API_KEY = '9b36f0044c8a4d2eb486e3b037749361.3oTwpnahTWQvSp4w'
 
 interface GLMASRConfig {
   endpoint: string
@@ -18,7 +19,7 @@ export class GLMASREngine implements ASREngine {
 
   private config: GLMASRConfig = {
     endpoint: DEFAULT_ENDPOINT,
-    apiKey: '',
+    apiKey: DEFAULT_API_KEY,
     model: DEFAULT_MODEL
   }
 
