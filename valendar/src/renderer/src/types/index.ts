@@ -97,4 +97,5 @@ export interface Settings {
   crudCountdown?: number
   crudAutoExecute?: string
   asrOnlineKey?: string
+  aiSupportsImage?: boolean
 }

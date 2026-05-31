@@ -1,4 +1,4 @@
-import type { NLUEngine, NLUResult } from './nlu.interface'
+import type { NLUEngine, NLUResult, ExistingEvent } from './nlu.interface'
 import type { CRUDOperation } from '../../types/conversation'
 import { Annotation, StateGraph, END } from '@langchain/langgraph'
 import { v4 as uuidv4 } from 'uuid'
@@ -16,20 +16,23 @@ const NLUState = Annotation.Root({
   error: Annotation<string | null>,
   baseUrl: Annotation<string>,
   apiKey: Annotation<string>,
-  model: Annotation<string>
+  model: Annotation<string>,
+  images: Annotation<string[]>,
+  supportsImage: Annotation<boolean>,
+  existingEvents: Annotation<ExistingEvent[]>
 })
 
 type NLUStateType = typeof NLUState.State
 
 // ─── Prompts ─────────────────────────────────────────────────────────
 
-function buildSystemPrompt(): string {
+function buildSystemPrompt(hasImages: boolean, existingEvents: ExistingEvent[]): string {
   const now = new Date()
   const today = now.toISOString().slice(0, 10)
   const time = now.toTimeString().slice(0, 5)
   const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
-  return `你是日历助手，将用户的自然语言解析为日历操作。
+  let prompt = `你是日历助手，将用户的自然语言解析为日历操作。
 
 当前日期: ${today}
 当前时间: ${time}
@@ -39,6 +42,7 @@ function buildSystemPrompt(): string {
 - 创建/添加/安排/开会/约/提醒/计划 → "create"
 - 改/修改/变更/调整/推迟/提前 → "update"
 - 删除/取消/去掉/移除/不要了 → "delete"
+- 查询/查看/有什么/找/显示/列出/日程/安排 → "query"
 - 无法判断 → 返回空 operations
 
 ## 时间
@@ -54,18 +58,44 @@ function buildSystemPrompt(): string {
 - 其他→"personal"
 
 ## 置信度
-- 信息完整→0.9-1.0, 部分缺失→0.6-0.8, 猜测→0.3-0.5
+- 信息完整→0.9-1.0, 部分缺失→0.6-0.8, 猜测→0.3-0.5`
+
+  if (existingEvents.length > 0) {
+    const eventList = existingEvents
+      .slice(0, 20)
+      .map((e) => `- "${e.title}" (${e.startDate}${e.startTime ? ' ' + e.startTime : ''})`)
+      .join('\n')
+    prompt += `
+
+## 当前已有事件（用于查询和删除匹配）
+${eventList}
+- 删除操作时，请使用已有事件的标题进行匹配
+- 查询操作时，使用标题中的关键词进行模糊匹配`
+  }
+
+  if (hasImages) {
+    prompt += `
+
+## 图片分析
+- 如果提供了图片，请分析图片中与日程相关的信息（日期、时间、事件名称、地点等）
+- 结合图片内容和文字指令生成操作
+- 如果图片中包含日程邀请、会议通知、活动海报等，提取其中的事件信息`
+  }
+
+  prompt += `
 
 严格返回 JSON:
-{"operations":[{"type":"create|update|delete","confidence":0.0-1.0,"event":{"title":"必填","description":"可选","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","startTime":"HH:MM或null","endTime":"HH:MM或null","isAllDay":true/false,"category":"work|personal|holiday|important|custom","location":"可选或null"}}]}`
+{"operations":[{"type":"create|update|delete|query","confidence":0.0-1.0,"event":{"title":"必填(删除/查询时用匹配关键词)","description":"可选","startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD","startTime":"HH:MM或null","endTime":"HH:MM或null","isAllDay":true/false,"category":"work|personal|holiday|important|custom","location":"可选或null"}}]}`
+
+  return prompt
 }
 
 // ─── Nodes ───────────────────────────────────────────────────────────
 
-/** 前置校验：过滤空输入 */
+/** 前置校验：过滤空输入（允许仅图片输入） */
 async function preprocess(state: NLUStateType): Promise<Partial<NLUStateType>> {
-  log.info('[Preprocess] input:', state.text)
-  if (!state.text.trim()) {
+  log.info('[Preprocess] input:', state.text, '| images:', state.images?.length || 0)
+  if (!state.text.trim() && (!state.images || state.images.length === 0)) {
     return { error: 'empty_input' }
   }
   return { error: null }
@@ -75,8 +105,26 @@ async function preprocess(state: NLUStateType): Promise<Partial<NLUStateType>> {
 async function llmParse(state: NLUStateType): Promise<Partial<NLUStateType>> {
   if (state.error) return {}
 
-  log.info('[LLM] calling:', state.baseUrl, '| model:', state.model)
+  const hasImages = state.supportsImage && state.images && state.images.length > 0
+  log.info('[LLM] calling:', state.baseUrl, '| model:', state.model, '| images:', hasImages ? state.images!.length : 0, '| events:', state.existingEvents?.length || 0)
   const url = `${state.baseUrl.replace(/\/$/, '')}/chat/completions`
+
+  // Build user message - multimodal when images present
+  let userMessage: any
+  if (hasImages) {
+    const contentParts: any[] = state.images!.map((url) => ({
+      type: 'image_url',
+      image_url: { url }
+    }))
+    if (state.text.trim()) {
+      contentParts.push({ type: 'text', text: state.text })
+    } else {
+      contentParts.push({ type: 'text', text: '请分析图片中的日程信息' })
+    }
+    userMessage = { role: 'user', content: contentParts }
+  } else {
+    userMessage = { role: 'user', content: state.text }
+  }
 
   try {
     const res = await fetch(url, {
@@ -88,8 +136,8 @@ async function llmParse(state: NLUStateType): Promise<Partial<NLUStateType>> {
       body: JSON.stringify({
         model: state.model,
         messages: [
-          { role: 'system', content: buildSystemPrompt() },
-          { role: 'user', content: state.text }
+          { role: 'system', content: buildSystemPrompt(!!hasImages, state.existingEvents || []) },
+          userMessage
         ],
         response_format: { type: 'json_object' },
         temperature: 0.1
@@ -119,14 +167,16 @@ async function assemble(state: NLUStateType): Promise<Partial<NLUStateType>> {
   if (state.error || !state.llmResponse) {
     log.warn('[Assemble] using local fallback, error:', state.error)
     const today = new Date().toISOString().slice(0, 10)
+    const title = state.text.trim() || '图片中的事件'
     return {
       operations: [{
         id: uuidv4(),
         source: state.source,
         confidence: 0.5,
         type: 'create',
+        status: 'pending' as const,
         event: {
-          title: state.text.trim(),
+          title,
           startDate: today,
           endDate: today,
           isAllDay: true,
@@ -144,7 +194,8 @@ async function assemble(state: NLUStateType): Promise<Partial<NLUStateType>> {
         id: uuidv4(),
         source: state.source,
         confidence: Math.max(0, Math.min(1, op.confidence ?? 0.7)),
-        type: op.type as 'create' | 'update' | 'delete',
+        type: op.type as 'create' | 'update' | 'delete' | 'query',
+        status: 'pending' as const,
         event: {
           title: op.event.title,
           description: op.event.description,
@@ -170,8 +221,9 @@ async function assemble(state: NLUStateType): Promise<Partial<NLUStateType>> {
         source: state.source,
         confidence: 0.5,
         type: 'create',
+        status: 'pending' as const,
         event: {
-          title: state.text.trim(),
+          title: state.text.trim() || '图片中的事件',
           startDate: today,
           endDate: today,
           isAllDay: true,
@@ -214,6 +266,7 @@ export class LangGraphNLU implements NLUEngine {
   private baseUrl = ''
   private apiKey = ''
   private model = ''
+  private _supportsImage = false
 
   configure(baseUrl: string, apiKey: string, model: string): void {
     this.baseUrl = baseUrl
@@ -222,12 +275,17 @@ export class LangGraphNLU implements NLUEngine {
     log.info('Configured:', { baseUrl, apiKey: apiKey ? '***' : '(empty)', model, available: this.isAvailable() })
   }
 
+  setSupportsImage(flag: boolean): void {
+    this._supportsImage = flag
+  }
+
   isAvailable(): boolean {
     return !!(this.baseUrl && this.apiKey && this.model)
   }
 
-  async parse(text: string, source: 'nlu'): Promise<NLUResult> {
-    log.info('parse() called | available:', this.isAvailable(), '| text:', text)
+  async parse(text: string, source: 'nlu', images?: string[], existingEvents?: ExistingEvent[]): Promise<NLUResult> {
+    const hasImages = images && images.length > 0
+    log.info('parse() called | available:', this.isAvailable(), '| text:', text, '| images:', hasImages ? images!.length : 0, '| events:', existingEvents?.length || 0)
 
     if (!this.isAvailable()) {
       log.warn('NLU not configured, using local fallback')
@@ -244,7 +302,10 @@ export class LangGraphNLU implements NLUEngine {
         error: null,
         baseUrl: this.baseUrl,
         apiKey: this.apiKey,
-        model: this.model
+        model: this.model,
+        images: images || [],
+        supportsImage: this._supportsImage,
+        existingEvents: existingEvents || []
       })
 
       return { operations: result.operations, rawText: text, source }
@@ -263,6 +324,7 @@ export class LangGraphNLU implements NLUEngine {
         source,
         confidence: 0.5,
         type: 'create',
+        status: 'pending' as const,
         event: {
           title: text.trim(),
           startDate: today,

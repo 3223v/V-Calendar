@@ -96,15 +96,16 @@ function closeEventForm(): void {
 }
 
 .events-column {
-  flex: 1;
+  flex: 0.75;
   min-width: 0;
+  max-width: 300px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .conversation-column {
-  flex: 1;
+  flex: 1.5;
   min-width: 0;
   overflow: hidden;
 }

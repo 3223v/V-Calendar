@@ -8,27 +8,46 @@
       <div v-if="currentSession && currentSession.messages.length === 0" class="empty-chat">
         <div class="empty-icon">🎙️</div>
         <p class="empty-text">开始语音或文字输入</p>
-        <p class="empty-hint">描述您想要创建的事件</p>
+        <p class="empty-hint">描述您想要创建、删除或查询的事件</p>
       </div>
 
       <TransitionGroup name="message" tag="div" class="messages-list">
-        <div
-          v-for="msg in currentSession?.messages"
-          :key="msg.id"
-          class="message-bubble"
-          :class="[msg.role, msg.source]"
-        >
-          <div class="message-source">
-            {{ sourceLabel(msg.source) }}
+        <template v-for="msg in currentSession?.messages" :key="msg.id">
+          <!-- User message -->
+          <div
+            v-if="msg.role === 'user'"
+            class="message-bubble user"
+          >
+            <div v-if="msg.images && msg.images.length > 0" class="message-images">
+              <img v-for="(img, idx) in msg.images" :key="idx" :src="img" class="msg-img" />
+            </div>
+            <div class="message-content">{{ msg.content }}</div>
           </div>
-          <div class="message-content">{{ msg.content }}</div>
-        </div>
-      </TransitionGroup>
-    </div>
 
-    <div class="processing-indicator" v-if="isProcessing">
-      <div class="spinner"></div>
-      <span>正在处理...</span>
+          <!-- System message -->
+          <div
+            v-else
+            class="message-bubble system"
+            :class="[msg.status || '']"
+            @click="msg.opIds && msg.opIds.length > 0 && msg.status !== 'thinking' && !isResultStatus(msg.status) ? handleBubbleClick(msg) : undefined"
+          >
+            <div class="system-header">
+              <span v-if="msg.status === 'thinking'" class="status-icon thinking">
+                <span class="spinner-small"></span>
+              </span>
+              <span v-else-if="msg.status === 'executed'" class="status-icon executed">✓</span>
+              <span v-else-if="msg.status === 'abandoned'" class="status-icon abandoned">✗</span>
+              <span v-else-if="msg.status === 'error'" class="status-icon error">✗</span>
+              <span v-else-if="msg.status === 'created'" class="status-icon created">✓</span>
+              <span v-else-if="msg.status === 'rolled-back'" class="status-icon rolled-back">↩</span>
+            </div>
+            <div class="message-content" style="white-space: pre-line">{{ msg.content }}</div>
+            <div v-if="shouldShowExpand(msg)" class="expand-hint">
+              点击查看待执行操作
+            </div>
+          </div>
+        </template>
+      </TransitionGroup>
     </div>
 
     <VoiceInput />
@@ -39,19 +58,29 @@
 import { computed, watch, nextTick, ref } from 'vue'
 import { useConversationStore } from '../../stores/conversation.store'
 import VoiceInput from './VoiceInput.vue'
+import type { ConversationMessage } from '../../types/conversation'
 
 const conversationStore = useConversationStore()
 const currentSession = computed(() => conversationStore.currentSession)
-const isProcessing = computed(() => conversationStore.isProcessing)
 
 const messagesContainer = ref<HTMLDivElement | null>(null)
 
-function sourceLabel(source: string): string {
-  const labels: Record<string, string> = {
-    'voice-online': '语音',
-    text: '文字'
+function isResultStatus(status?: string): boolean {
+  return status === 'created' || status === 'executed' || status === 'rolled-back' || status === 'error' || status === 'abandoned'
+}
+
+function shouldShowExpand(msg: ConversationMessage): boolean {
+  if (!msg.opIds || msg.opIds.length === 0) return false
+  if (msg.status === 'thinking') return false
+  // Don't show expand for result messages (created/executed/rolled-back/error/abandoned)
+  if (isResultStatus(msg.status)) return false
+  return true
+}
+
+function handleBubbleClick(msg: ConversationMessage): void {
+  if (msg.opIds) {
+    conversationStore.setHighlightedOps(msg.opIds)
   }
-  return labels[source] || ''
 }
 
 watch(
@@ -143,17 +172,102 @@ watch(
   align-self: flex-start;
   background-color: var(--color-surface-hover);
   color: var(--color-text);
+  cursor: default;
 }
 
-.message-source {
-  font-size: var(--text-xs);
+.message-bubble.system.thinking {
+  opacity: 0.8;
+}
+
+.message-bubble.system.executed {
+  border-left: 3px solid #27ae60;
+}
+
+.message-bubble.system.created {
+  border-left: 3px solid #27ae60;
+}
+
+.message-bubble.system.abandoned {
+  border-left: 3px solid var(--color-text-light);
   opacity: 0.7;
+}
+
+.message-bubble.system.error {
+  border-left: 3px solid #e74c3c;
+}
+
+.message-bubble.system.rolled-back {
+  border-left: 3px solid #f39c12;
+  opacity: 0.7;
+}
+
+.system-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
   margin-bottom: var(--spacing-1);
+}
+
+.status-icon {
+  font-size: var(--text-sm);
+  font-weight: bold;
+}
+
+.status-icon.executed,
+.status-icon.created {
+  color: #27ae60;
+}
+
+.status-icon.abandoned {
+  color: var(--color-text-light);
+}
+
+.status-icon.error {
+  color: #e74c3c;
+}
+
+.status-icon.rolled-back {
+  color: #f39c12;
+}
+
+.spinner-small {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .message-content {
   font-size: var(--text-md);
   line-height: var(--leading-relaxed);
+}
+
+.message-images {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-2);
+}
+
+.msg-img {
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.expand-hint {
+  font-size: var(--text-xs);
+  color: var(--color-primary);
+  margin-top: var(--spacing-2);
+  cursor: pointer;
 }
 
 .message-enter-active {
@@ -172,31 +286,4 @@ watch(
 .message-leave-to {
   opacity: 0;
 }
-
-.processing-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2);
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-  flex-shrink: 0;
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-primary);
-  border-radius: var(--radius-full);
-  animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 </style>

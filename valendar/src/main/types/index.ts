@@ -96,6 +96,7 @@ export interface Settings {
   crudCountdown?: number
   crudAutoExecute?: string
   asrOnlineKey?: string
+  aiSupportsImage?: boolean
 }
 
 export interface NotificationOptions {
@@ -116,4 +117,45 @@ export interface ImportResult {
   imported: number
   skipped: number
   errors: Array<{ index: number; error: string }>
+}
+
+export interface ConversationMessage {
+  id: string
+  role: 'user' | 'system'
+  content: string
+  source: 'voice-online' | 'text'
+  timestamp: string
+  images?: string[]
+  status?: 'thinking' | 'executed' | 'abandoned' | 'error' | 'created' | 'rolled-back'
+  opIds?: string[]
+  executedEventId?: string
+}
+
+export interface ConversationCRUDOperation {
+  id: string
+  source: 'nlu'
+  confidence: number
+  type: 'create' | 'update' | 'delete' | 'query'
+  status: 'pending' | 'executing' | 'executed' | 'abandoned' | 'error' | 'rolled-back'
+  executedEventId?: string
+  event: {
+    title: string
+    description?: string
+    startDate: string
+    endDate: string
+    startTime?: string
+    endTime?: string
+    isAllDay: boolean
+    category: string
+    location?: string
+  }
+}
+
+export interface ConversationHistoryEntry {
+  id: string
+  messages: ConversationMessage[]
+  crudOperations: ConversationCRUDOperation[]
+  status: 'completed' | 'abandoned'
+  createdAt: string
+  completedAt: string
 }

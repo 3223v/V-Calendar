@@ -274,6 +274,7 @@ function isRestDay(dateInfo: any): boolean {
   align-items: flex-end;
   flex: 1;
   min-height: 0;
+  padding-bottom: 54px;
 }
 
 .lunar-date {
@@ -305,9 +306,12 @@ function isRestDay(dateInfo: any): boolean {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex-shrink: 0;
   overflow: hidden;
-  margin-top: auto;
+  position: absolute;
+  bottom: var(--spacing-1\.5);
+  left: var(--spacing-1\.5);
+  right: var(--spacing-1\.5);
+  max-height: 50px;
 }
 
 .event-marker {

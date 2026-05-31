@@ -1,4 +1,4 @@
-import type { NLUEngine, NLUResult } from './nlu.interface'
+import type { NLUEngine, NLUResult, ExistingEvent } from './nlu.interface'
 import { langGraphNLU } from './langgraph-nlu'
 import { createLogger } from '../../utils/logger'
 
@@ -60,18 +60,22 @@ class NLUManager implements NLUEngine {
   }
 
   /** Configure the active engine's LLM connection */
-  configure(baseUrl: string, apiKey: string, model: string): void {
+  configure(baseUrl: string, apiKey: string, model: string, supportsImage?: boolean): void {
     if (!this.activeEngine) {
       log.warn('No active engine to configure')
       return
     }
 
-    log.info('configure() called:', { baseUrl, apiKey: apiKey ? '***set***' : '(empty)', model })
+    log.info('configure() called:', { baseUrl, apiKey: apiKey ? '***set***' : '(empty)', model, supportsImage })
 
     // Engines that support LLM configuration implement configure()
     if ('configure' in this.activeEngine && typeof (this.activeEngine as any).configure === 'function') {
       (this.activeEngine as any).configure(baseUrl, apiKey, model)
       log.info('Engine configured:', this.activeEngine.name, '| available:', this.activeEngine.isAvailable())
+    }
+
+    if (supportsImage !== undefined && 'setSupportsImage' in this.activeEngine && typeof (this.activeEngine as any).setSupportsImage === 'function') {
+      (this.activeEngine as any).setSupportsImage(supportsImage)
     }
   }
 
@@ -79,11 +83,11 @@ class NLUManager implements NLUEngine {
     return this.activeEngine?.isAvailable() ?? false
   }
 
-  async parse(text: string, source: 'nlu'): Promise<NLUResult> {
+  async parse(text: string, source: 'nlu', images?: string[], existingEvents?: ExistingEvent[]): Promise<NLUResult> {
     if (!this.activeEngine) {
       throw new Error('No NLU engine available')
     }
-    return this.activeEngine.parse(text, source)
+    return this.activeEngine.parse(text, source, images, existingEvents)
   }
 }
 

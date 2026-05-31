@@ -44,9 +44,10 @@
             class="hour-slot"
             :class="{ 'selected-slot': isTimeSlotSelected(dateInfo.dateStr, hour - 1) }"
             @click="handleTimeSlotClick(dateInfo.date, hour - 1)"
-          >
+          ></div>
+          <div class="events-overlay">
             <div
-              v-for="event in getEventForHour(getDateInfo(dateInfo.date).events, hour - 1)"
+              v-for="event in getDateInfo(dateInfo.date).events"
               :key="event.id"
               class="event-block"
               :style="{
@@ -54,7 +55,7 @@
                 top: getEventTop(event),
                 height: getEventHeight(event)
               }"
-              @click="handleEventClick(event)"
+              @click.stop="handleEventClick(event)"
             >
               <div class="event-title">{{ event.title }}</div>
               <div v-if="event.startTime" class="event-time">
@@ -76,8 +77,7 @@ import {
   getEventColor,
   formatHour,
   getEventTop,
-  getEventHeight,
-  getEventForHour
+  getEventHeight
 } from '../../utils/event-display'
 import type { CalendarEvent } from '../../types'
 
@@ -278,6 +278,16 @@ function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
   background-color: var(--color-primary-focus);
 }
 
+.events-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
 .event-block {
   position: absolute;
   left: 2px;
@@ -289,6 +299,7 @@ function handleTimeSlotClick(date: dayjs.Dayjs, hour: number): void {
   overflow: hidden;
   cursor: pointer;
   transition: all var(--transition-fast);
+  pointer-events: auto;
   z-index: 1;
 }
 

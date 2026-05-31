@@ -10,12 +10,13 @@ import {
   unlinkSync,
   statSync
 } from 'fs'
-import type { CalendarEvent, Settings, Alarm, EventInput, AlarmInput } from '../types'
+import type { CalendarEvent, Settings, Alarm, EventInput, AlarmInput, ConversationHistoryEntry } from '../types'
 
 interface StoreSchema {
   events: CalendarEvent[]
   settings: Settings
   alarms: Alarm[]
+  conversations: ConversationHistoryEntry[]
 }
 
 const defaultSettings: Settings = {
@@ -28,7 +29,8 @@ const defaultSettings: Settings = {
   holidayRegions: ['CN'],
   alarmSound: 'default',
   alarmVolume: 80,
-  snoozeMinutes: 5
+  snoozeMinutes: 5,
+  aiSupportsImage: false
 }
 
 const BACKUP_DIR = 'backups'
@@ -82,7 +84,8 @@ class StorageService {
       defaults: {
         events: [],
         settings: defaultSettings,
-        alarms: []
+        alarms: [],
+        conversations: []
       }
     })
 
@@ -404,6 +407,45 @@ class StorageService {
     this.assertReady()
     const alarms = (await this.getAlarms()).filter((a: Alarm) => !a.isDismissed)
     this.store.set('alarms', alarms)
+  }
+
+  // --- Conversation History ---
+
+  async getConversations(): Promise<ConversationHistoryEntry[]> {
+    this.assertReady()
+    return this.store.get('conversations', [])
+  }
+
+  async saveConversation(entry: ConversationHistoryEntry): Promise<ConversationHistoryEntry> {
+    this.assertReady()
+    const conversations = await this.getConversations()
+    const existingIndex = conversations.findIndex((c) => c.id === entry.id)
+    if (existingIndex >= 0) {
+      conversations[existingIndex] = entry
+    } else {
+      conversations.push(entry)
+    }
+    // Keep last 100 conversations
+    if (conversations.length > 100) {
+      conversations.splice(0, conversations.length - 100)
+    }
+    this.store.set('conversations', conversations)
+    return entry
+  }
+
+  async deleteConversation(id: string): Promise<boolean> {
+    this.assertReady()
+    const conversations = await this.getConversations()
+    const index = conversations.findIndex((c) => c.id === id)
+    if (index === -1) return false
+    conversations.splice(index, 1)
+    this.store.set('conversations', conversations)
+    return true
+  }
+
+  async clearConversations(): Promise<void> {
+    this.assertReady()
+    this.store.set('conversations', [])
   }
 
   async exportData(): Promise<string> {

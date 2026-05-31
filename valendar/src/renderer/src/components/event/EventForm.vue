@@ -77,7 +77,7 @@
 
       <div v-if="alarmEnabled" class="form-group">
         <label>提前提醒</label>
-        <select v-model="formData.alarmBefore" class="input">
+        <select v-model="alarmBeforeSelect" class="input" @change="handleAlarmBeforeChange">
           <option :value="5">5 分钟</option>
           <option :value="10">10 分钟</option>
           <option :value="15">15 分钟</option>
@@ -85,7 +85,76 @@
           <option :value="60">1 小时</option>
           <option :value="120">2 小时</option>
           <option :value="1440">1 天</option>
+          <option :value="-1">自定义</option>
         </select>
+        <input
+          v-if="alarmBeforeSelect === -1"
+          v-model.number="customAlarmMinutes"
+          type="number"
+          min="1"
+          class="input"
+          style="margin-top: var(--spacing-2)"
+          placeholder="输入分钟数"
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input v-model="repeatEnabled" type="checkbox" />
+          <span>设置重复</span>
+        </label>
+      </div>
+
+      <div v-if="repeatEnabled" class="repeat-section">
+        <div class="form-group">
+          <label>重复频率</label>
+          <select v-model="formData.repeatFrequency" class="input">
+            <option value="daily">每天</option>
+            <option value="weekly">每周</option>
+            <option value="monthly">每月</option>
+            <option value="yearly">每年</option>
+            <option value="custom">自定义</option>
+          </select>
+        </div>
+
+        <div v-if="formData.repeatFrequency === 'custom'" class="form-group" style="margin-top: var(--spacing-3)">
+          <label>每隔多少天重复</label>
+          <input v-model.number="formData.repeatInterval" type="number" min="1" class="input" placeholder="天数" />
+        </div>
+
+        <div v-if="formData.repeatFrequency === 'weekly'" class="form-group" style="margin-top: var(--spacing-3)">
+          <label>重复日</label>
+          <div class="weekday-checks">
+            <label v-for="(day, idx) in weekdayLabels" :key="idx" class="weekday-check">
+              <input type="checkbox" :value="idx" v-model="formData.repeatWeekdays" />
+              <span>{{ day }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="formData.repeatFrequency === 'monthly'" class="form-group" style="margin-top: var(--spacing-3)">
+          <label>每月几号</label>
+          <input v-model.number="formData.repeatMonthDay" type="number" min="1" max="31" class="input" placeholder="日期" />
+        </div>
+
+        <div class="form-group" style="margin-top: var(--spacing-3)">
+          <label>结束条件</label>
+          <select v-model="repeatEndType" class="input">
+            <option value="never">永不结束</option>
+            <option value="date">到指定日期</option>
+            <option value="count">重复指定次数</option>
+          </select>
+        </div>
+
+        <div v-if="repeatEndType === 'date'" class="form-group" style="margin-top: var(--spacing-3)">
+          <label>结束日期</label>
+          <input v-model="formData.repeatEndDate" type="date" class="input" />
+        </div>
+
+        <div v-if="repeatEndType === 'count'" class="form-group" style="margin-top: var(--spacing-3)">
+          <label>重复次数</label>
+          <input v-model.number="formData.repeatCount" type="number" min="1" class="input" placeholder="次数" />
+        </div>
       </div>
 
       <div v-if="submitError" class="form-error">{{ submitError }}</div>
@@ -103,7 +172,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import dayjs from 'dayjs'
-import type { CalendarEvent, EventInput, EventCategory } from '../../types'
+import type { CalendarEvent, EventInput, EventCategory, RepeatRule } from '../../types'
 import { useEventStore } from '../../stores/event.store'
 import { createLogger } from '../../utils/logger'
 import ModalBox from '../common/ModalBox.vue'
@@ -138,13 +207,32 @@ const formData = ref({
   isAllDay: !props.defaultStartTime,
   category: 'personal' as EventCategory,
   location: '',
-  alarmBefore: 15
+  alarmBefore: 15,
+  repeatFrequency: 'daily' as 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom',
+  repeatInterval: 1,
+  repeatEndDate: '',
+  repeatCount: 0,
+  repeatWeekdays: [] as number[],
+  repeatMonthDay: 0
 })
 
 const alarmEnabled = ref(false)
+const alarmBeforeSelect = ref(15)
+const customAlarmMinutes = ref(15)
+const repeatEnabled = ref(false)
+const repeatEndType = ref<'never' | 'date' | 'count'>('never')
+const defaultAlarmOptions = [5, 10, 15, 30, 60, 120, 1440]
+const weekdayLabels = ['日', '一', '二', '三', '四', '五', '六']
+
+function handleAlarmBeforeChange(): void {
+  if (alarmBeforeSelect.value !== -1) {
+    formData.value.alarmBefore = alarmBeforeSelect.value
+  }
+}
 
 onMounted(() => {
   if (props.event) {
+    const before = props.event.alarm?.before || 15
     formData.value = {
       title: props.event.title,
       description: props.event.description || '',
@@ -155,9 +243,27 @@ onMounted(() => {
       isAllDay: props.event.isAllDay,
       category: props.event.category,
       location: props.event.location || '',
-      alarmBefore: props.event.alarm?.before || 15
+      alarmBefore: before,
+      repeatFrequency: props.event.repeat?.frequency || 'daily',
+      repeatInterval: props.event.repeat?.interval || 1,
+      repeatEndDate: props.event.repeat?.endDate || '',
+      repeatCount: props.event.repeat?.count || 0,
+      repeatWeekdays: props.event.repeat?.weekdays || [],
+      repeatMonthDay: props.event.repeat?.monthDay || 0
     }
     alarmEnabled.value = props.event.alarm?.isEnabled || false
+    alarmBeforeSelect.value = defaultAlarmOptions.includes(before) ? before : -1
+    if (alarmBeforeSelect.value === -1) {
+      customAlarmMinutes.value = before
+    }
+    repeatEnabled.value = !!props.event.repeat
+    if (props.event.repeat?.endDate) {
+      repeatEndType.value = 'date'
+    } else if (props.event.repeat?.count) {
+      repeatEndType.value = 'count'
+    } else {
+      repeatEndType.value = 'never'
+    }
   }
   focusTitleInput()
 })
@@ -187,6 +293,30 @@ function handleSubmit(): void {
 
   submitting.value = true
 
+  const alarmBeforeValue = alarmBeforeSelect.value === -1
+    ? customAlarmMinutes.value
+    : formData.value.alarmBefore
+
+  let repeatRule: RepeatRule | undefined
+  if (repeatEnabled.value) {
+    repeatRule = {
+      frequency: formData.value.repeatFrequency === 'custom' ? 'daily' : formData.value.repeatFrequency as 'daily' | 'weekly' | 'monthly' | 'yearly',
+      interval: formData.value.repeatFrequency === 'custom' ? formData.value.repeatInterval : 1
+    }
+    if (formData.value.repeatFrequency === 'weekly' && formData.value.repeatWeekdays.length > 0) {
+      repeatRule.weekdays = formData.value.repeatWeekdays
+    }
+    if (formData.value.repeatFrequency === 'monthly' && formData.value.repeatMonthDay > 0) {
+      repeatRule.monthDay = formData.value.repeatMonthDay
+    }
+    if (repeatEndType.value === 'date' && formData.value.repeatEndDate) {
+      repeatRule.endDate = formData.value.repeatEndDate
+    }
+    if (repeatEndType.value === 'count' && formData.value.repeatCount > 0) {
+      repeatRule.count = formData.value.repeatCount
+    }
+  }
+
   const eventInput: EventInput = {
     title: formData.value.title.trim(),
     description: formData.value.description || undefined,
@@ -197,10 +327,11 @@ function handleSubmit(): void {
     isAllDay: formData.value.isAllDay,
     category: formData.value.category,
     location: formData.value.location || undefined,
+    repeat: repeatRule,
     alarm: alarmEnabled.value
       ? {
           id: props.event?.alarm?.id || '',
-          before: formData.value.alarmBefore,
+          before: alarmBeforeValue,
           isEnabled: true
         }
       : undefined
@@ -337,6 +468,46 @@ function handleClose(): void {
   color: #dc2626;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
+}
+
+.repeat-section {
+  padding: var(--spacing-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.weekday-checks {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.weekday-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: var(--spacing-1) var(--spacing-2);
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  transition: all var(--transition-fast);
+}
+
+.weekday-check:has(input:checked) {
+  background-color: var(--color-primary-focus);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.weekday-check input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--color-primary);
 }
 
 textarea.input {

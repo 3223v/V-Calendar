@@ -4,7 +4,8 @@ import type {
   EventQueryParams,
   Alarm,
   AlarmInput,
-  Settings
+  Settings,
+  ConversationHistoryEntry
 } from '../../main/types'
 
 export interface EventAPI {
@@ -50,6 +51,13 @@ export interface DataAPI {
   ) => Promise<{ success: boolean; imported: number; skipped: number; errors: any[] }>
 }
 
+export interface ConversationAPI {
+  getAll: () => Promise<ConversationHistoryEntry[]>
+  save: (entry: ConversationHistoryEntry) => Promise<ConversationHistoryEntry>
+  delete: (id: string) => Promise<boolean>
+  clear: () => Promise<void>
+}
+
 export interface ElectronAPI {
   ipcRenderer: {
     send: (channel: string, ...args: any[]) => void
@@ -63,6 +71,7 @@ export interface API {
   alarm: AlarmAPI
   settings: SettingsAPI
   data: DataAPI
+  conversation: ConversationAPI
 }
 
 declare global {

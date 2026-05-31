@@ -18,7 +18,8 @@ export const useSettingsStore = defineStore('settings', () => {
     alarmVolume: 80,
     snoozeMinutes: 5,
     crudCountdown: 10,
-    crudAutoExecute: 'best'
+    crudAutoExecute: 'best',
+    aiSupportsImage: false
   })
   const loading = ref(false)
   const error = ref<string | null>(null)

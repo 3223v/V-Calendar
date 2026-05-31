@@ -8,6 +8,7 @@ import { webmToWav } from '../utils/audio-utils'
 import { onlineASR } from '../services/asr/online-asr'
 import { nluManager } from '../services/nlu/nlu-manager'
 import { useEventStore } from './event.store'
+import { useSettingsStore } from './settings.store'
 
 const log = createLogger('ConversationStore')
 
@@ -26,9 +27,15 @@ export const useConversationStore = defineStore('conversation', () => {
 
   let audioStream: MediaStream | null = null
   let recorderChunks: Blob[] = []
+  const highlightedOps = ref<string[]>([])
 
   const currentSession = computed(() => {
     return sessions.value.find((s) => s.id === currentSessionId.value) || null
+  })
+
+  const supportsImages = computed(() => {
+    const settingsStore = useSettingsStore()
+    return settingsStore.settings.aiSupportsImage || false
   })
 
   function setCountdownSeconds(seconds: number): void {
@@ -60,6 +67,61 @@ export const useConversationStore = defineStore('conversation', () => {
     })
   }
 
+  function addSystemMessage(
+    content: string,
+    status?: ConversationMessage['status'],
+    opIds?: string[],
+    executedEventId?: string
+  ): void {
+    addMessage({
+      role: 'system',
+      content,
+      source: 'text',
+      status,
+      opIds,
+      executedEventId
+    })
+  }
+
+  /** Replace the last thinking message with the actual result */
+  function replaceThinkingMessage(
+    content: string,
+    status?: ConversationMessage['status'],
+    opIds?: string[],
+    executedEventId?: string
+  ): void {
+    const session = getOrCreateSession()
+    const lastThinkingIdx = [...session.messages].reverse().findIndex(
+      (m) => m.role === 'system' && m.status === 'thinking'
+    )
+    if (lastThinkingIdx >= 0) {
+      const realIdx = session.messages.length - 1 - lastThinkingIdx
+      session.messages[realIdx] = {
+        ...session.messages[realIdx],
+        content,
+        status,
+        opIds,
+        executedEventId
+      }
+    } else {
+      addSystemMessage(content, status, opIds, executedEventId)
+    }
+  }
+
+  function setHighlightedOps(opIds: string[]): void {
+    highlightedOps.value = opIds
+  }
+
+  function typeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      create: '创建',
+      update: '更新',
+      delete: '删除',
+      query: '查询'
+    }
+    return labels[type] || type
+  }
+
   function setCRUDOperations(operations: CRUDOperation[]): void {
     const session = getOrCreateSession()
     session.crudOperations = operations
@@ -74,7 +136,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
     const onlineReady = await onlineASR.isAvailable()
     if (!onlineReady) {
-      speechError.value = '语音识别不可用。请到 设置 → 语音识别 → 填写智谱 API Key'
+      addSystemMessage('语音识别不可用。请到 设置 → 语音识别 → 填写智谱 API Key', 'error')
       return
     }
 
@@ -90,7 +152,7 @@ export const useConversationStore = defineStore('conversation', () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       log.error('getUserMedia failed:', msg)
-      speechError.value = `无法访问麦克风：${msg}`
+      addSystemMessage(`无法访问麦克风：${msg}`, 'error')
       return
     }
 
@@ -106,7 +168,7 @@ export const useConversationStore = defineStore('conversation', () => {
       }
 
       if (!mimeType) {
-        speechError.value = '当前浏览器不支持音频录制'
+        addSystemMessage('当前浏览器不支持音频录制', 'error')
         audioStream.getTracks().forEach((t) => t.stop())
         audioStream = null
         return
@@ -131,7 +193,7 @@ export const useConversationStore = defineStore('conversation', () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       log.error('MediaRecorder start failed:', msg)
-      speechError.value = `录音启动失败：${msg}`
+      addSystemMessage(`录音启动失败：${msg}`, 'error')
       audioStream?.getTracks().forEach((t) => t.stop())
       audioStream = null
     }
@@ -154,7 +216,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
       if (!result.text) {
         log.warn('Online ASR returned empty text')
-        speechError.value = '未检测到有效语音输入，请靠近麦克风后重试'
+        addSystemMessage('未检测到有效语音输入，请靠近麦克风后重试', 'error')
         return
       }
 
@@ -166,7 +228,7 @@ export const useConversationStore = defineStore('conversation', () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       log.error('ASR error:', msg)
-      speechError.value = msg
+      addSystemMessage(`语音识别失败：${msg}`, 'error')
     } finally {
       isProcessing.value = false
     }
@@ -200,37 +262,118 @@ export const useConversationStore = defineStore('conversation', () => {
     inputCountdown.value = 0
   }
 
+  function cancelInputCountdown(): void {
+    stopInputCountdown()
+    transcribedText.value = ''
+  }
+
   // --- Text Processing ---
 
-  async function processTextInput(text: string): Promise<void> {
+  async function processTextInput(text: string, images?: string[]): Promise<void> {
     stopInputCountdown()
     const trimmed = text.trim()
-    if (!trimmed) return
+    if (!trimmed && (!images || images.length === 0)) return
 
     isProcessing.value = true
     const session = getOrCreateSession()
     session.status = 'processing'
 
     try {
-      addMessage({ role: 'user', content: trimmed, source: 'text' })
+      addMessage({ role: 'user', content: trimmed || '[图片]', source: 'text', images })
 
-      const result = await nluManager.parse(trimmed, 'nlu')
+      // Add thinking message
+      addSystemMessage('正在思考...', 'thinking')
+
+      // Inject existing events context for NLU
+      const eventStore = useEventStore()
+      const existingEvents = eventStore.events.map((e) => ({
+        id: e.id,
+        title: e.title,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        category: e.category
+      }))
+
+      const result = await nluManager.parse(trimmed, 'nlu', images, existingEvents)
       setCRUDOperations(result.operations)
 
       if (result.operations.length === 0) {
         session.status = 'completed'
-        speechError.value = '未能解析出可执行操作，请尝试更明确的指令，如"明天下午3点开会"'
+        replaceThinkingMessage('未能解析出可执行操作，请尝试更明确的指令')
       } else {
-        session.status = 'waiting-decision'
-        startCRUDCountdown()
+        if (!hasQueryOps(result.operations)) {
+          // No query ops - normal flow
+          session.status = 'waiting-decision'
+          const opDescriptions = result.operations
+            .map((op) => `${typeLabel(op.type)} "${op.event.title}"`)
+            .join('、')
+          const opIds = result.operations.map((op) => op.id)
+          replaceThinkingMessage(
+            `识别到 ${result.operations.length} 个操作：${opDescriptions}`,
+            undefined,
+            opIds
+          )
+          startCRUDCountdown()
+        } else {
+          // Query ops - execute immediately
+          session.status = 'waiting-decision'
+          const queryOps = result.operations.filter((op) => op.type === 'query')
+          const otherOps = result.operations.filter((op) => op.type !== 'query')
+
+          // Execute queries immediately
+          for (const qOp of queryOps) {
+            await executeQuery(qOp)
+          }
+
+          if (otherOps.length > 0) {
+            setCRUDOperations(otherOps)
+            const opDescriptions = otherOps
+              .map((op) => `${typeLabel(op.type)} "${op.event.title}"`)
+              .join('、')
+            const opIds = otherOps.map((op) => op.id)
+            addSystemMessage(
+              `还有 ${otherOps.length} 个待执行操作：${opDescriptions}`,
+              undefined,
+              opIds
+            )
+            startCRUDCountdown()
+          } else {
+            session.status = 'completed'
+          }
+        }
       }
     } catch (err) {
       log.error('NLU error:', err)
       session.status = 'completed'
-      speechError.value = `处理失败：${err instanceof Error ? err.message : String(err)}`
+      replaceThinkingMessage(`处理失败：${err instanceof Error ? err.message : String(err)}`, 'error')
     } finally {
       isProcessing.value = false
     }
+  }
+
+  function hasQueryOps(ops: CRUDOperation[]): boolean {
+    return ops.some((op) => op.type === 'query')
+  }
+
+  async function executeQuery(op: CRUDOperation): Promise<void> {
+    const eventStore = useEventStore()
+    const events = await eventStore.searchEvents(op.event.title)
+    if (events.length > 0) {
+      const eventList = events
+        .slice(0, 5)
+        .map((e) => `  • ${e.title} (${e.startDate}${e.startTime ? ' ' + e.startTime : ''})`)
+        .join('\n')
+      replaceThinkingMessage(
+        `找到 ${events.length} 个相关事件：\n${eventList}${events.length > 5 ? '\n  ...等' : ''}`,
+        'executed',
+        [op.id]
+      )
+    } else {
+      replaceThinkingMessage(`未找到与"${op.event.title}"相关的事件`, 'executed', [op.id])
+    }
+    op.status = 'executed'
   }
 
   // --- CRUD Countdown (auto-execute operations) ---
@@ -263,7 +406,9 @@ export const useConversationStore = defineStore('conversation', () => {
   function autoExecuteCRUD(): void {
     const session = currentSession.value
     if (!session || session.crudOperations.length === 0) return
-    const bestOp = session.crudOperations.reduce((a, b) => (a.confidence > b.confidence ? a : b))
+    const pendingOps = session.crudOperations.filter((o) => o.status === 'pending')
+    if (pendingOps.length === 0) return
+    const bestOp = pendingOps.reduce((a, b) => (a.confidence > b.confidence ? a : b))
     executeCRUD(bestOp.id)
   }
 
@@ -271,12 +416,12 @@ export const useConversationStore = defineStore('conversation', () => {
     const session = currentSession.value
     if (!session) return
 
-    session.status = 'executing'
     stopCRUDCountdown()
 
     const op = session.crudOperations.find((o) => o.id === operationId)
-    if (!op) return
+    if (!op || op.status === 'executed') return
 
+    op.status = 'executing'
     log.info('Executing CRUD:', op.type, op.event.title)
 
     try {
@@ -284,7 +429,7 @@ export const useConversationStore = defineStore('conversation', () => {
 
       switch (op.type) {
         case 'create': {
-          await eventStore.createEvent({
+          const created = await eventStore.createEvent({
             title: op.event.title,
             description: op.event.description,
             startDate: op.event.startDate,
@@ -295,6 +440,9 @@ export const useConversationStore = defineStore('conversation', () => {
             category: (op.event.category || 'personal') as EventCategory,
             location: op.event.location
           })
+          if (created) {
+            op.executedEventId = created.id
+          }
           break
         }
         case 'update': {
@@ -323,12 +471,65 @@ export const useConversationStore = defineStore('conversation', () => {
         }
       }
       await eventStore.fetchEvents()
-      session.status = 'completed'
+      op.status = 'executed'
+
+      // Check if all ops are done
+      const allDone = session.crudOperations.every(
+        (o) => o.status === 'executed' || o.status === 'abandoned' || o.status === 'error' || o.status === 'rolled-back'
+      )
+      if (allDone) {
+        session.status = 'completed'
+      }
+
+      if (op.type === 'create' && op.executedEventId) {
+        addSystemMessage(
+          `已创建 "${op.event.title}"`,
+          'created',
+          [op.id],
+          op.executedEventId
+        )
+      } else {
+        addSystemMessage(
+          `已${typeLabel(op.type)} "${op.event.title}"`,
+          'executed',
+          [op.id]
+        )
+      }
       log.info('CRUD executed successfully:', op.type, op.event.title)
     } catch (err) {
       log.error('CRUD execution failed:', err)
-      session.status = 'completed'
-      speechError.value = `执行失败：${err instanceof Error ? err.message : String(err)}`
+      op.status = 'error'
+      addSystemMessage(
+        `${typeLabel(op.type)} "${op.event.title}" 失败：${err instanceof Error ? err.message : String(err)}`,
+        'error',
+        [op.id]
+      )
+    }
+  }
+
+  async function rollbackCRUD(operationId: string): Promise<void> {
+    const session = currentSession.value
+    if (!session) return
+
+    const op = session.crudOperations.find((o) => o.id === operationId)
+    if (!op || !op.executedEventId) return
+
+    log.info('Rolling back CRUD:', op.type, op.event.title)
+
+    try {
+      const eventStore = useEventStore()
+      await eventStore.deleteEvent(op.executedEventId)
+      await eventStore.fetchEvents()
+      op.status = 'rolled-back'
+      addSystemMessage(
+        `已撤销创建 "${op.event.title}"`,
+        'rolled-back',
+        [op.id]
+      )
+      log.info('CRUD rolled back successfully:', op.type, op.event.title)
+    } catch (err) {
+      log.error('CRUD rollback failed:', err)
+      addSystemMessage(`撤销失败：${err instanceof Error ? err.message : String(err)}`, 'error')
     }
   }
 
@@ -337,6 +538,11 @@ export const useConversationStore = defineStore('conversation', () => {
     if (!session) return
     session.status = 'abandoned'
     stopCRUDCountdown()
+    const opIds = session.crudOperations.map((op) => {
+      op.status = 'abandoned'
+      return op.id
+    })
+    addSystemMessage('已放弃操作', 'abandoned', opIds)
   }
 
   function newSession(): void {
@@ -359,17 +565,23 @@ export const useConversationStore = defineStore('conversation', () => {
     speechError,
     inputCountdown,
     crudCountdownSeconds,
+    supportsImages,
+    highlightedOps,
     setCountdownSeconds,
     startListening,
     stopListening,
     processTextInput,
     startInputCountdown,
     stopInputCountdown,
+    cancelInputCountdown,
     executeCRUD,
+    rollbackCRUD,
     autoExecuteCRUD,
     abandonCRUD,
     newSession,
     stopCRUDCountdown,
-    addMessage
+    addMessage,
+    addSystemMessage,
+    setHighlightedOps
   }
 })

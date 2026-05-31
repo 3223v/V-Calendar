@@ -77,12 +77,24 @@
           </div>
           <div class="form-group">
             <label>延迟提醒（分钟）</label>
-            <select v-model="localSettings.snoozeMinutes" class="input" @change="handleSave">
+            <select v-model="snoozeSelectValue" class="input" @change="handleSnoozeChange">
               <option :value="5">5 分钟</option>
               <option :value="10">10 分钟</option>
               <option :value="15">15 分钟</option>
               <option :value="30">30 分钟</option>
+              <option :value="0">自定义</option>
             </select>
+            <input
+              v-if="snoozeSelectValue === 0"
+              v-model.number="localSettings.snoozeMinutes"
+              type="number"
+              min="1"
+              max="1440"
+              class="input"
+              style="margin-top: var(--spacing-2)"
+              placeholder="输入分钟数"
+              @change="handleSave"
+            />
           </div>
         </div>
       </section>
@@ -120,6 +132,12 @@
             placeholder="gpt-4o"
             @blur="handleSave"
           />
+        </div>
+        <div class="form-group checkbox-group" style="margin-top: var(--spacing-3)">
+          <label class="checkbox-label">
+            <input v-model="localSettings.aiSupportsImage" type="checkbox" @change="handleSave" />
+            <span>AI 模型支持图片输入</span>
+          </label>
         </div>
       </section>
 
@@ -203,6 +221,7 @@ interface LocalSettings {
   crudCountdown: number
   crudAutoExecute: string
   asrOnlineKey: string
+  aiSupportsImage: boolean
 }
 
 const localSettings = reactive<LocalSettings>({
@@ -219,8 +238,19 @@ const localSettings = reactive<LocalSettings>({
   aiModel: '',
   crudCountdown: 10,
   crudAutoExecute: 'best',
-  asrOnlineKey: ''
+  asrOnlineKey: '',
+  aiSupportsImage: false
 })
+
+const snoozeSelectValue = ref(5)
+const defaultSnoozeOptions = [5, 10, 15, 30]
+
+function handleSnoozeChange(): void {
+  if (snoozeSelectValue.value !== 0) {
+    localSettings.snoozeMinutes = snoozeSelectValue.value
+  }
+  handleSave()
+}
 
 onMounted(async () => {
   await settingsStore.fetchSettings()
@@ -239,6 +269,10 @@ onMounted(async () => {
   localSettings.crudCountdown = s.crudCountdown || 10
   localSettings.crudAutoExecute = s.crudAutoExecute || 'best'
   localSettings.asrOnlineKey = s.asrOnlineKey || ''
+  localSettings.aiSupportsImage = s.aiSupportsImage || false
+  snoozeSelectValue.value = defaultSnoozeOptions.includes(s.snoozeMinutes)
+    ? s.snoozeMinutes
+    : 0
 })
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
@@ -259,7 +293,8 @@ async function handleSave(): Promise<void> {
       aiModel: localSettings.aiModel || undefined,
       crudCountdown: localSettings.crudCountdown,
       crudAutoExecute: localSettings.crudAutoExecute,
-      asrOnlineKey: localSettings.asrOnlineKey || undefined
+      asrOnlineKey: localSettings.asrOnlineKey || undefined,
+      aiSupportsImage: localSettings.aiSupportsImage
     })
 
     // Update online ASR engine at runtime (no restart needed)
@@ -269,7 +304,8 @@ async function handleSave(): Promise<void> {
     nluManager.configure(
       localSettings.aiApiUrl || '',
       localSettings.aiApiKey || '',
-      localSettings.aiModel || ''
+      localSettings.aiModel || '',
+      localSettings.aiSupportsImage
     )
 
     settingsStore.applyTheme(localSettings.theme as 'light' | 'dark' | 'system')
