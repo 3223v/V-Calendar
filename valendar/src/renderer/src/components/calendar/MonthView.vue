@@ -24,11 +24,8 @@
             {{ dateInfo.day }}
           </span>
           <div class="day-tags">
-            <!-- 调休工作日标记（红色班字） -->
             <span v-if="isAdditionalWorkday(dateInfo)" class="tag tag-work"> 班 </span>
-            <!-- 非工作日休息标记（绿色休字） -->
             <span v-if="isRestDay(dateInfo)" class="tag tag-rest"> 休 </span>
-            <!-- 农历节日/节气（右上角） -->
             <span
               v-if="dateInfo.lunarFestival || dateInfo.solarTerm"
               class="tag tag-lunar-festival"
@@ -38,11 +35,9 @@
           </div>
         </div>
         <div class="day-content">
-          <!-- 农历信息 -->
           <span class="lunar-date" :class="{ 'lunar-first': dateInfo.lunarInfo?.lunarDay === 1 }">
             {{ dateInfo.lunarDateString }}
           </span>
-          <!-- 阳历节假日（右下角） -->
           <span v-if="dateInfo.solarHoliday" class="solar-holiday">
             {{ dateInfo.solarHoliday }}
           </span>
@@ -136,19 +131,20 @@ function isRestDay(dateInfo: any): boolean {
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(6, 1fr);
   flex: 1;
+  overflow: hidden;
 }
 
 .calendar-day {
   border-right: 1px solid var(--color-border-light);
   border-bottom: 1px solid var(--color-border-light);
   padding: var(--spacing-1\.5);
-  min-height: 0;
   display: flex;
   flex-direction: column;
   cursor: pointer;
   transition: background-color var(--transition-fast);
   position: relative;
   overflow: hidden;
+  min-height: 0;
 }
 
 .calendar-day:hover {
@@ -272,8 +268,7 @@ function isRestDay(dateInfo: any): boolean {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 .lunar-date {
@@ -307,7 +302,7 @@ function isRestDay(dateInfo: any): boolean {
   gap: 2px;
   flex-shrink: 0;
   overflow: hidden;
-  margin-top: auto;
+  margin-top: var(--spacing-1);
 }
 
 .event-marker {
@@ -319,6 +314,7 @@ function isRestDay(dateInfo: any): boolean {
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.4;
+  max-height: 20px;
 }
 
 .event-title {

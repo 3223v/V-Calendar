@@ -1,9 +1,12 @@
 export interface ConversationMessage {
   id: string
-  role: 'user' | 'system'
+  role: 'user' | 'system' | 'assistant'
+  type: 'text' | 'thinking' | 'result' | 'error' | 'abandoned' | 'completed'
   content: string
-  source: 'voice-online' | 'text'
+  source: 'voice-online' | 'text' | 'nlu' | 'system'
   timestamp: string
+  crudOperations?: CRUDOperation[]
+  metadata?: Record<string, any>
 }
 
 export interface CRUDOperation {
@@ -22,6 +25,8 @@ export interface CRUDOperation {
     category: string
     location?: string
   }
+  executed?: boolean
+  error?: string
 }
 
 export interface NLUResult {
@@ -37,6 +42,7 @@ export interface ConversationSession {
   status: 'listening' | 'processing' | 'waiting-decision' | 'executing' | 'completed' | 'abandoned'
   countdownSeconds: number
   createdAt: string
+  updatedAt: string
 }
 
 export interface AISettings {

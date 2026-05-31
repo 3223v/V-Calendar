@@ -13,13 +13,14 @@
         </div>
       </div>
     </div>
-    <div class="day-content">
-      <div class="time-column">
+    <div class="day-content" ref="contentRef">
+      <div class="time-column" ref="timeColumnRef">
         <div v-for="hour in 24" :key="hour" class="time-slot">
           {{ formatHour(hour - 1) }}
         </div>
       </div>
-      <div class="events-column">
+      <div class="events-column" ref="eventsColumnRef">
+        <div class="grid-lines"></div>
         <div
           v-for="hour in 24"
           :key="hour"
@@ -55,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useCalendar } from '../../composables/useCalendar'
 import {
   getEventColor,
@@ -71,6 +72,39 @@ const emit = defineEmits<{
 }>()
 
 const { selectedDate, getDateInfo, selectTimeSlot, selectedTimeSlot } = useCalendar()
+
+const contentRef = ref<HTMLElement | null>(null)
+const timeColumnRef = ref<HTMLElement | null>(null)
+const eventsColumnRef = ref<HTMLElement | null>(null)
+
+function syncScroll(source: HTMLElement | null, targets: HTMLElement[]): void {
+  if (!source) return
+  targets.forEach((target) => {
+    if (target && target !== source) {
+      target.scrollTop = source.scrollTop
+    }
+  })
+}
+
+function handleScroll(e: Event): void {
+  const source = e.target as HTMLElement
+  const targets: HTMLElement[] = []
+  if (timeColumnRef.value && source !== timeColumnRef.value) targets.push(timeColumnRef.value)
+  if (eventsColumnRef.value && source !== eventsColumnRef.value) targets.push(eventsColumnRef.value)
+  syncScroll(source, targets)
+}
+
+onMounted(() => {
+  if (contentRef.value) {
+    contentRef.value.addEventListener('scroll', handleScroll)
+  }
+})
+
+onUnmounted(() => {
+  if (contentRef.value) {
+    contentRef.value.removeEventListener('scroll', handleScroll)
+  }
+})
 
 const selectedDateInfo = computed(() => {
   const info = getDateInfo(selectedDate.value)
@@ -164,13 +198,22 @@ function handleTimeSlotClick(hour: number): void {
 .day-content {
   display: flex;
   flex: 1;
-  overflow-y: auto;
+  position: relative;
+  overflow: hidden;
 }
 
 .time-column {
   width: 80px;
   flex-shrink: 0;
   border-right: 1px solid var(--color-border-light);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.time-column::-webkit-scrollbar {
+  display: none;
 }
 
 .time-slot {
@@ -188,6 +231,31 @@ function handleTimeSlotClick(hour: number): void {
 .events-column {
   flex: 1;
   position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.events-column::-webkit-scrollbar {
+  display: none;
+}
+
+.grid-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 59px,
+    var(--color-border-light) 59px,
+    var(--color-border-light) 60px
+  );
+  background-size: 100% 60px;
 }
 
 .hour-slot {

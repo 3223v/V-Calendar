@@ -6,6 +6,7 @@ import { registerEventHandlers } from './ipc/event.ipc'
 import { registerAlarmHandlers } from './ipc/alarm.ipc'
 import { registerSettingsHandlers } from './ipc/settings.ipc'
 import { registerDataHandlers } from './ipc/data.ipc'
+import { registerConversationHandlers } from './ipc/conversation.ipc'
 import { alarmService } from './services/alarm.service'
 import { storageService } from './services/storage.service'
 
@@ -55,6 +56,7 @@ app.whenReady().then(async () => {
   registerAlarmHandlers()
   registerSettingsHandlers()
   registerDataHandlers()
+  registerConversationHandlers()
 
   ipcMain.on('ping', () => console.log('pong'))
 

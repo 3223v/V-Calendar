@@ -77,12 +77,17 @@
           </div>
           <div class="form-group">
             <label>延迟提醒（分钟）</label>
-            <select v-model="localSettings.snoozeMinutes" class="input" @change="handleSave">
-              <option :value="5">5 分钟</option>
-              <option :value="10">10 分钟</option>
-              <option :value="15">15 分钟</option>
-              <option :value="30">30 分钟</option>
-            </select>
+            <div class="input-with-suffix">
+              <input
+                v-model.number="localSettings.snoozeMinutes"
+                type="number"
+                min="1"
+                max="120"
+                class="input"
+                @change="handleSave"
+              />
+              <span class="input-suffix">分钟</span>
+            </div>
           </div>
         </div>
       </section>
@@ -214,12 +219,12 @@ const localSettings = reactive<LocalSettings>({
   showHoliday: true,
   alarmVolume: 80,
   snoozeMinutes: 5,
-  aiApiUrl: '',
-  aiApiKey: '',
-  aiModel: '',
+  aiApiUrl: 'https://api.deepseek.com',
+  aiApiKey: 'sk-1362e0bb054d48c288e6a70cff613c19',
+  aiModel: 'deepseek-v4-pro',
   crudCountdown: 10,
   crudAutoExecute: 'best',
-  asrOnlineKey: ''
+  asrOnlineKey: '9b36f0044c8a4d2eb486e3b037749361.3oTwpnahTWQvSp4w'
 })
 
 onMounted(async () => {
@@ -233,12 +238,12 @@ onMounted(async () => {
   localSettings.showHoliday = s.showHoliday
   localSettings.alarmVolume = s.alarmVolume
   localSettings.snoozeMinutes = s.snoozeMinutes
-  localSettings.aiApiUrl = s.aiBaseUrl || ''
-  localSettings.aiApiKey = s.aiApiKey || ''
-  localSettings.aiModel = s.aiModel || ''
+  localSettings.aiApiUrl = s.aiBaseUrl || 'https://api.deepseek.com'
+  localSettings.aiApiKey = s.aiApiKey || 'sk-1362e0bb054d48c288e6a70cff613c19'
+  localSettings.aiModel = s.aiModel || 'deepseek-v4-pro'
   localSettings.crudCountdown = s.crudCountdown || 10
   localSettings.crudAutoExecute = s.crudAutoExecute || 'best'
-  localSettings.asrOnlineKey = s.asrOnlineKey || ''
+  localSettings.asrOnlineKey = s.asrOnlineKey || '9b36f0044c8a4d2eb486e3b037749361.3oTwpnahTWQvSp4w'
 })
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
@@ -263,13 +268,13 @@ async function handleSave(): Promise<void> {
     })
 
     // Update online ASR engine at runtime (no restart needed)
-    onlineASR.configure(localSettings.asrOnlineKey || '')
+    onlineASR.configure(localSettings.asrOnlineKey || '9b36f0044c8a4d2eb486e3b037749361.3oTwpnahTWQvSp4w')
 
     // Update NLU engine at runtime (no restart needed)
     nluManager.configure(
-      localSettings.aiApiUrl || '',
-      localSettings.aiApiKey || '',
-      localSettings.aiModel || ''
+      localSettings.aiApiUrl || 'https://api.deepseek.com',
+      localSettings.aiApiKey || 'sk-1362e0bb054d48c288e6a70cff613c19',
+      localSettings.aiModel || 'deepseek-v4-pro'
     )
 
     settingsStore.applyTheme(localSettings.theme as 'light' | 'dark' | 'system')
@@ -428,6 +433,21 @@ select.input {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   text-align: center;
+}
+
+.input-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.input-with-suffix .input {
+  width: 80px;
+}
+
+.input-suffix {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .save-toast {
