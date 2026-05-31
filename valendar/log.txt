@@ -1,0 +1,34 @@
+logger.ts:57 19:22:36.012 [NLUManager] Registered engine: LangGraph NLU
+logger.ts:57 19:22:36.019 [NLUManager] Active engine set to: LangGraph NLU
+logger.ts:57 19:22:36.060 [App] App mounted, fetching initial data...
+logger.ts:57 19:22:36.114 [EventStore] fetchEvents called
+logger.ts:57 19:22:36.133 [EventStore] fetchEvents loaded 0 events
+logger.ts:57 19:22:36.160 [OnlineASR] ASR configured with API key
+logger.ts:57 19:22:36.160 [App] ASR configured from settings
+logger.ts:57 19:22:36.160 [NLUManager] configure() called: Object
+logger.ts:57 19:22:36.160 [LangGraphNLU] Configured: Object
+logger.ts:57 19:22:36.161 [NLUManager] Engine configured: LangGraph NLU | available: true
+logger.ts:57 19:22:36.161 [App] NLU configured from settings
+logger.ts:57 19:22:46.367 [LangGraphNLU] parse() called | available: true | text:  | images: 1 | events: 0
+logger.ts:57 19:22:46.384 [LangGraphNLU] [Preprocess] input:  | images: 1
+logger.ts:57 19:22:46.386 [LangGraphNLU] [LLM] calling: https://api.xiaomimimo.com/v1 | model: mimo-v2.5 | images: 0 | events: 0
+logger.ts:57 19:22:47.376 [LangGraphNLU] [LLM] response: {"operations":[]}}
+logger.ts:79 19:22:47.390 [LangGraphNLU] [Assemble] JSON parse failed: SyntaxError: Unexpected non-whitespace character after JSON at position 17 (line 1 column 18)
+    at JSON.parse (<anonymous>)
+    at RunnableCallable.assemble [as func] (langgraph-nlu.ts:340:25)
+    at @langchain_langgraph.js?v=2a1cfbd0:53938:111
+    at MockAsyncLocalStorage2.run (@langchain_langgraph.js?v=2a1cfbd0:15766:12)
+    at AsyncLocalStorageProvider2.runWithConfig (@langchain_langgraph.js?v=2a1cfbd0:15800:20)
+    at RunnableCallable.invoke (@langchain_langgraph.js?v=2a1cfbd0:53938:66)
+    at RunnableSequence2.invoke (@langchain_langgraph.js?v=2a1cfbd0:37273:109)
+    at async _runWithRetry (@langchain_langgraph.js?v=2a1cfbd0:56436:16)
+    at async PregelRunner._executeTasksWithRetry (@langchain_langgraph.js?v=2a1cfbd0:56612:27)
+    at async PregelRunner.tick (@langchain_langgraph.js?v=2a1cfbd0:56533:67) | response: {"operations":[]}}
+error @ logger.ts:79
+logger.ts:57 19:22:52.397 [ConversationStore] Executing CRUD: create 从图片提取的事件
+logger.ts:57 19:22:52.398 [EventStore] createEvent called: 从图片提取的事件
+logger.ts:57 19:22:52.398 [EventStore] Calling IPC event:create...
+logger.ts:57 19:22:52.438 [EventStore] IPC returned: df679bed-46cb-4bed-9d39-9053c0ee836e 从图片提取的事件
+logger.ts:57 19:22:52.439 [EventStore] fetchEvents called
+logger.ts:57 19:22:52.440 [EventStore] fetchEvents loaded 1 events
+logger.ts:57 19:22:52.440 [ConversationStore] CRUD executed successfully: create 从图片提取的事件

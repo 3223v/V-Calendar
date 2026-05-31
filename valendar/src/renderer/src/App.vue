@@ -132,9 +132,10 @@ onMounted(async () => {
     nluManager.configure(
       settingsStore.settings.aiBaseUrl || '',
       llmKey,
-      settingsStore.settings.aiModel || ''
+      settingsStore.settings.aiModel || '',
+      settingsStore.settings.aiSupportsImage
     )
-    log.info('NLU configured from settings')
+    log.info('NLU configured from settings, supportsImage:', settingsStore.settings.aiSupportsImage)
   }
 
   // Wire CRUD countdown from settings
